@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="RepoWise: AI-Powered OSS Documentation Assistant">
+  <meta name="keywords" content="OSS, AI, RAG, Open Source, Documentation">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RepoWise - Where OSS Exploration Begins</title>
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="./static/js/bulma-carousel.min.js"></script>
+  <script src="./static/js/bulma-slider.min.js"></script>
+  <script src="./static/js/index.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    ol li { margin-bottom: 1em; }
+    a { text-decoration: none; }
+    body { font-size: 18px; }
+    .diagram-container { margin: 2em 0; text-align: center; }
+    .diagram-container img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .feature-box { padding: 1.5em; background: #f8f9fa; border-radius: 8px; margin: 1em 0; }
+    .hero-logo { font-size: 3.5em; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar" role="navigation" aria-label="main navigation">
+  <div class="navbar-brand">
+    <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+    </a>
+  </div>
+  <div class="navbar-menu">
+    <div class="navbar-start" style="flex-grow: 1; justify-content: center;">
+      <a class="navbar-item" href="https://decallab.cs.ucdavis.edu/" target="_blank">
+        <span class="icon"><i class="fas fa-home"></i></span>
+      </a>
+
+      <div class="navbar-item has-dropdown is-hoverable">
+        <a class="navbar-link">Repositories</a>
+        <div class="navbar-dropdown">
+          <a class="navbar-item" href="https://github.com/RepoWise/backend" target="_blank">Backend</a>
+          <a class="navbar-item" href="https://github.com/RepoWise/frontend" target="_blank">Frontend</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="navbar-end">
+      <div class="navbar-item">
+        <div class="buttons">
+          <a class="button is-primary is-rounded" href="https://github.com/RepoWise" target="_blank">
+            <span class="icon"><i class="fab fa-github"></i></span>
+            <span>GitHub</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <h1 class="hero-logo">RepoWise</h1>
+          <h2 class="subtitle is-4" style="margin-top: 1em;">
+            Where OSS Exploration Begins
+          </h2>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block">
+              AI-Powered Documentation Assistant for Open Source Software
+            </span>
+          </div>
+
+          <div class="column has-text-centered">
+            <div class="publication-links">
+              <span class="link-block">
+                <a href="https://github.com/RepoWise/backend" class="external-link button is-normal is-rounded is-dark" target="_blank">
+                  <span class="icon"><i class="fab fa-github"></i></span>
+                  <span>Backend Code</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="https://github.com/RepoWise/frontend" class="external-link button is-normal is-rounded is-dark" target="_blank">
+                  <span class="icon"><i class="fab fa-github"></i></span>
+                  <span>Frontend Code</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="#architecture" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fas fa-diagram-project"></i></span>
+                  <span>Architecture</span>
+                </a>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content has-text-justified">
+          <p>
+            <strong>RepoWise</strong> is an AI-powered documentation assistant that helps developers and stakeholders
+            quickly understand open-source software projects through natural language queries. Using advanced
+            Retrieval-Augmented Generation (RAG) techniques and intelligent query classification, RepoWise provides
+            accurate, context-aware answers by analyzing project documentation, commit history, and issue tracking data.
+          </p>
+          <p>
+            The system automatically extracts and indexes governance documents, contribution guidelines, commit data,
+            and issue reports from GitHub repositories. When users ask questions, RepoWise intelligently routes queries
+            to appropriate data sources and generates comprehensive answers with source attribution, making OSS exploration
+            efficient and accessible.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="architecture">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">System Architecture</h2>
+
+    <div class="content">
+      <h3 class="title is-4">High-Level Overview</h3>
+      <div class="diagram-container">
+        <img src="./static/diagrams/High_Level.png" alt="High-Level Architecture" />
+        <p class="has-text-centered"><em>Figure 1: High-level system architecture showing major components</em></p>
+      </div>
+
+      <h3 class="title is-4">Detailed Architecture</h3>
+      <div class="diagram-container">
+        <img src="./static/diagrams/ColorfulArchitecture.png" alt="Detailed Architecture" />
+        <p class="has-text-centered"><em>Figure 2: Detailed architecture with RAG pipeline and data flow</em></p>
+      </div>
+
+      <div class="feature-box">
+        <h4 class="title is-5">Core Components</h4>
+        <ol>
+          <li><strong>GitHub Crawler:</strong> Automatically extracts documentation, commits, and issues from repositories</li>
+          <li><strong>Intent Classifier:</strong> Routes queries to appropriate data sources (documents, commits, or issues)</li>
+          <li><strong>Multi-Modal RAG Engine:</strong> Combines vector search with structured data for comprehensive answers</li>
+          <li><strong>LLM Integration:</strong> Supports local (Ollama) and cloud LLM providers</li>
+          <li><strong>Web Interface:</strong> Modern React frontend with light/dark theme</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Intent Classification System</h2>
+
+    <div class="content">
+      <p>
+        RepoWise employs a sophisticated intent classification system that automatically determines whether
+        a query should be answered using documentation, commit history, or issue tracking data.
+      </p>
+
+      <div class="diagram-container">
+        <img src="./static/diagrams/IntentClassificationFlow1.png" alt="Intent Classification Flow" />
+        <p class="has-text-centered"><em>Figure 3: Intent classification workflow</em></p>
+      </div>
+
+      <div class="feature-box">
+        <h4 class="title is-5">Classification Categories</h4>
+        <ul>
+          <li><strong>Document Queries:</strong> Questions about governance, contribution guidelines, project policies
+            <ul>
+              <li>Example: "Who maintains this project?"</li>
+              <li>Example: "What are the contribution guidelines?"</li>
+            </ul>
+          </li>
+          <li><strong>Commit Queries:</strong> Questions about code changes, contributors, development activity
+            <ul>
+              <li>Example: "Who are the most active contributors?"</li>
+              <li>Example: "What was changed in the last release?"</li>
+            </ul>
+          </li>
+          <li><strong>Issue Queries:</strong> Questions about bugs, feature requests, project health
+            <ul>
+              <li>Example: "How many open issues are there?"</li>
+              <li>Example: "What are the most common bugs?"</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Key Features</h2>
+
+    <div class="columns is-multiline">
+      <div class="column is-half">
+        <div class="feature-box">
+          <h4 class="title is-5">🤖 Intelligent Query Processing</h4>
+          <p>Advanced NLP and LLM-powered query understanding with automatic intent classification</p>
+        </div>
+      </div>
+
+      <div class="column is-half">
+        <div class="feature-box">
+          <h4 class="title is-5">🔍 Multi-Source Retrieval</h4>
+          <p>Searches across documentation, commits, and issues for comprehensive answers</p>
+        </div>
+      </div>
+
+      <div class="column is-half">
+        <div class="feature-box">
+          <h4 class="title is-5">⚡ Fast Search with MRL</h4>
+          <p>Matryoshka Representation Learning enables 3-5x faster search with minimal accuracy loss</p>
+        </div>
+      </div>
+
+      <div class="column is-half">
+        <div class="feature-box">
+          <h4 class="title is-5">📊 Source Attribution</h4>
+          <p>Every answer includes references to source documents with relevance scores</p>
+        </div>
+      </div>
+
+      <div class="column is-half">
+        <div class="feature-box">
+          <h4 class="title is-5">🎨 Modern UI</h4>
+          <p>Clean, Perplexity-inspired interface with light/dark theme support</p>
+        </div>
+      </div>
+
+      <div class="column is-half">
+        <div class="feature-box">
+          <h4 class="title is-5">🔄 Real-Time Indexing</h4>
+          <p>Watch repository indexing progress with live status updates</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Technology Stack</h2>
+
+    <div class="content">
+      <div class="columns">
+        <div class="column">
+          <h4 class="title is-5">Backend</h4>
+          <ul>
+            <li><strong>Framework:</strong> FastAPI (Python)</li>
+            <li><strong>Vector Database:</strong> ChromaDB</li>
+            <li><strong>Embeddings:</strong> HuggingFace sentence-transformers</li>
+            <li><strong>LLM:</strong> Ollama (llama3.2) / Cloud providers</li>
+            <li><strong>Data Processing:</strong> pandas, BeautifulSoup4</li>
+          </ul>
+        </div>
+
+        <div class="column">
+          <h4 class="title is-5">Frontend</h4>
+          <ul>
+            <li><strong>Framework:</strong> React 18 with Vite</li>
+            <li><strong>UI Library:</strong> Tailwind CSS</li>
+            <li><strong>Animations:</strong> Framer Motion</li>
+            <li><strong>State Management:</strong> TanStack Query</li>
+            <li><strong>Icons:</strong> Lucide React</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Installation & Setup</h2>
+
+    <div class="content">
+      <h3 class="title is-4">Backend Setup</h3>
+      <pre><code># Clone the repository
+git clone https://github.com/RepoWise/backend.git
+cd backend
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your GitHub token and settings
+
+# Install Ollama (for local LLM)
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull llama3.2:1b
+
+# Start the server
+./start_dev.sh</code></pre>
+
+      <h3 class="title is-4">Frontend Setup</h3>
+      <pre><code># Clone the repository
+git clone https://github.com/RepoWise/frontend.git
+cd frontend
+
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.example .env
+# Edit .env with backend URL
+
+# Start development server
+npm run dev</code></pre>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Usage Example</h2>
+
+    <div class="content">
+      <h4 class="title is-5">Adding a Repository</h4>
+      <pre><code>POST /api/projects/add
+{
+  "github_url": "https://github.com/facebook/react"
+}</code></pre>
+
+      <h4 class="title is-5">Querying Documentation</h4>
+      <pre><code>POST /api/query
+{
+  "project_id": "facebook-react",
+  "query": "What are the contribution guidelines?"
+}</code></pre>
+
+      <h4 class="title is-5">Response Format</h4>
+      <pre><code>{
+  "answer": "To contribute to React, you should...",
+  "sources": [
+    {
+      "file_path": "CONTRIBUTING.md",
+      "score": 0.89,
+      "content": "..."
+    }
+  ],
+  "suggested_questions": [
+    "How do I submit a pull request?",
+    "What is the code review process?"
+  ]
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Research & Publications</h2>
+
+    <div class="content has-text-justified">
+      <p>
+        RepoWise builds upon research in retrieval-augmented generation, intent classification,
+        and open-source software analysis. Our work demonstrates that combining multiple data
+        sources (documentation, commits, issues) with intelligent routing significantly improves
+        the quality and relevance of answers compared to single-source approaches.
+      </p>
+
+      <div class="feature-box">
+        <h4 class="title is-5">Key Research Contributions</h4>
+        <ul>
+          <li>Novel intent classification system for OSS queries</li>
+          <li>Multi-modal RAG architecture combining structured and unstructured data</li>
+          <li>Efficient two-stage search using Matryoshka Representation Learning</li>
+          <li>Comprehensive evaluation on real-world OSS repositories</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Contact & Acknowledgments</h2>
+
+    <div class="content has-text-centered">
+      <p>
+        RepoWise is developed by the <a href="https://decallab.cs.ucdavis.edu/" target="_blank">DECAL Lab</a>
+        at UC Davis.
+      </p>
+
+      <div class="feature-box">
+        <h4 class="title is-5">Links</h4>
+        <p>
+          <a href="https://github.com/RepoWise" target="_blank">GitHub Organization</a> |
+          <a href="https://github.com/RepoWise/backend" target="_blank">Backend Repository</a> |
+          <a href="https://github.com/RepoWise/frontend" target="_blank">Frontend Repository</a>
+        </p>
+      </div>
+
+      <p class="is-size-6" style="margin-top: 2em;">
+        For questions or feedback, please open an issue on our GitHub repository.
+      </p>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="content has-text-centered">
+      <p>
+        <strong>RepoWise</strong> - Where OSS Exploration Begins
+      </p>
+      <p class="is-size-7">
+        © 2024 DECAL Lab, UC Davis. Released under MIT License.
+      </p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
