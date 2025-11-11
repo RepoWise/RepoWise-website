@@ -120,16 +120,18 @@
         <h2 class="title is-3">Abstract</h2>
         <div class="content has-text-justified">
           <p>
-            <strong>RepoWise</strong> is an AI-powered documentation assistant that helps developers and stakeholders
-            quickly understand open-source software projects through natural language queries. Using advanced
-            Retrieval-Augmented Generation (RAG) techniques and intelligent query classification, RepoWise provides
-            accurate, context-aware answers by analyzing project documentation, commit history, and issue tracking data.
+            Open-source software (OSS) projects often face challenges in governance, sustainability, and contributor onboarding.
+            Traditional analytics provide static metrics but lack interpretability and interactivity. <strong>RepoWise</strong>
+            introduces a conversational framework powered by large language models (LLMs) that performs forensic-style reasoning
+            over OSS repositories. It enables natural-language dialogue around key project documents—such as <code>governance.md</code>,
+            <code>contributing.md</code>, and <code>README.md</code>—to surface insights into project health, sustainability risks,
+            and actionable next steps.
           </p>
           <p>
-            The system automatically extracts and indexes governance documents, contribution guidelines, commit data,
-            and issue reports from GitHub repositories. When users ask questions, RepoWise intelligently routes queries
-            to appropriate data sources and generates comprehensive answers with source attribution, making OSS exploration
-            efficient and accessible.
+            By combining conversational AI with OSS analytics, RepoWise offers an interpretable, interactive approach to understanding
+            the social and technical dynamics of open-source development. The system automatically extracts and indexes governance
+            documents, contribution guidelines, commit data, and issue reports from GitHub repositories, then uses a five-stage intent
+            classification pipeline with dual retrieval engines to generate context-grounded, evidence-backed responses.
           </p>
         </div>
       </div>
@@ -157,11 +159,13 @@
       <div class="feature-box">
         <h4 class="title is-5">Core Components</h4>
         <ol>
-          <li><strong>GitHub Crawler:</strong> Automatically extracts documentation, commits, and issues from repositories</li>
-          <li><strong>Intent Classifier:</strong> Routes queries to appropriate data sources (documents, commits, or issues)</li>
-          <li><strong>Multi-Modal RAG Engine:</strong> Combines vector search with structured data for comprehensive answers</li>
-          <li><strong>LLM Integration:</strong> Supports local (Ollama) and cloud LLM providers</li>
-          <li><strong>Web Interface:</strong> Modern React frontend with light/dark theme</li>
+          <li><strong>User Interface (Frontend):</strong> React-based chat interface for natural language queries</li>
+          <li><strong>Intent Classification Module:</strong> Five-stage hierarchical pipeline achieving 86.4% accuracy in routing queries</li>
+          <li><strong>RAG Pipeline:</strong> Semantic search over project documentation using all-MiniLM-L6-v2 embeddings and ChromaDB</li>
+          <li><strong>CSV Data Pipeline:</strong> Structured retrieval of commit and issue metadata via GitHub API</li>
+          <li><strong>Prompt Assembly Engine:</strong> Merges retrieved context with anti-hallucination rules</li>
+          <li><strong>LLM Generation Module:</strong> Local Mistral 7B via Ollama for privacy-preserving reasoning</li>
+          <li><strong>Persistent Storage Layer:</strong> ChromaDB vector store, CSV cache, and file cache for reproducibility</li>
         </ol>
       </div>
     </div>
@@ -174,34 +178,48 @@
 
     <div class="content">
       <p>
-        RepoWise employs a sophisticated intent classification system that automatically determines whether
-        a query should be answered using documentation, commit history, or issue tracking data.
+        The Intent Classification Module is the cognitive core of RepoWise. It determines how each user query
+        should be processed by identifying its semantic intent and routing it to the corresponding retrieval engine.
+        The classification mechanism follows a <strong>five-stage hierarchical logic</strong> that incrementally
+        filters, analyzes, or refines the query based on linguistic and semantic cues until an appropriate intent
+        label is assigned, achieving <strong>86.4% accuracy</strong> across test repositories.
       </p>
 
       <div class="diagram-container">
         <img src="./static/diagrams/IntentClassificationFlow1.png" alt="Intent Classification Flow" />
-        <p class="has-text-centered"><em>Figure 3: Intent classification workflow</em></p>
+        <p class="has-text-centered"><em>Figure 3: Five-stage intent classification pipeline</em></p>
       </div>
 
       <div class="feature-box">
-        <h4 class="title is-5">Classification Categories</h4>
+        <h4 class="title is-5">Five-Stage Classification Pipeline</h4>
+        <ol>
+          <li><strong>Stage 0 - Out-of-Scope Detection:</strong> Screens out greetings and irrelevant inputs (confidence ~0.99)</li>
+          <li><strong>Stage 1 - Procedural Detection:</strong> Identifies process-oriented questions about documentation using phrases like "how do I," "who maintains" (confidence ~0.95)</li>
+          <li><strong>Stage 2 - Statistical Detection:</strong> Checks for numerical or activity-based queries like "Show top contributors" or "Which issues have most comments" (confidence ~0.90)</li>
+          <li><strong>Stage 3 - Keyword Scoring:</strong> Computes weighted frequencies for governance-related tokens. Queries with cumulative score ≥1.5 are classified as PROJECT_DOC (confidence 0.50-0.95)</li>
+          <li><strong>Stage 4 - Heuristic Fallback:</strong> Captures edge cases through syntactic and semantic heuristics (confidence 0.40-0.65)</li>
+        </ol>
+      </div>
+
+      <div class="feature-box">
+        <h4 class="title is-5">Query Classification Categories</h4>
         <ul>
-          <li><strong>Document Queries:</strong> Questions about governance, contribution guidelines, project policies
+          <li><strong>PROJECT_DOC:</strong> Governance, contribution guidelines, project policies → routed to RAG Pipeline
             <ul>
               <li>Example: "Who maintains this project?"</li>
               <li>Example: "What are the contribution guidelines?"</li>
             </ul>
           </li>
-          <li><strong>Commit Queries:</strong> Questions about code changes, contributors, development activity
+          <li><strong>COMMITS:</strong> Code changes, contributors, development activity → routed to CSV Data Pipeline
             <ul>
               <li>Example: "Who are the most active contributors?"</li>
-              <li>Example: "What was changed in the last release?"</li>
+              <li>Example: "What files were changed recently?"</li>
             </ul>
           </li>
-          <li><strong>Issue Queries:</strong> Questions about bugs, feature requests, project health
+          <li><strong>ISSUES:</strong> Bugs, feature requests, project health → routed to CSV Data Pipeline
             <ul>
               <li>Example: "How many open issues are there?"</li>
-              <li>Example: "What are the most common bugs?"</li>
+              <li>Example: "What are the most commented issues?"</li>
             </ul>
           </li>
         </ul>
@@ -217,43 +235,43 @@
     <div class="columns is-multiline">
       <div class="column is-half">
         <div class="feature-box">
-          <h4 class="title is-5">🤖 Intelligent Query Processing</h4>
-          <p>Advanced NLP and LLM-powered query understanding with automatic intent classification</p>
+          <h4 class="title is-5">🤖 Five-Stage Intent Classification</h4>
+          <p>Hierarchical pipeline achieving 86.4% accuracy in routing queries to appropriate retrieval engines</p>
         </div>
       </div>
 
       <div class="column is-half">
         <div class="feature-box">
-          <h4 class="title is-5">🔍 Multi-Source Retrieval</h4>
-          <p>Searches across documentation, commits, and issues for comprehensive answers</p>
+          <h4 class="title is-5">🔍 Dual Retrieval Engines</h4>
+          <p>Semantic RAG for documentation and structured CSV pipeline for commits/issues data</p>
         </div>
       </div>
 
       <div class="column is-half">
         <div class="feature-box">
-          <h4 class="title is-5">⚡ Fast Search with MRL</h4>
-          <p>Matryoshka Representation Learning enables 3-5x faster search with minimal accuracy loss</p>
+          <h4 class="title is-5">🛡️ Anti-Hallucination Mechanisms</h4>
+          <p>Context-grounded responses with strict factual boundaries and evidence-backed reasoning</p>
         </div>
       </div>
 
       <div class="column is-half">
         <div class="feature-box">
-          <h4 class="title is-5">📊 Source Attribution</h4>
-          <p>Every answer includes references to source documents with relevance scores</p>
+          <h4 class="title is-5">📊 Governance & Sustainability Analysis</h4>
+          <p>Forensic-style reasoning over governance documents, contributor patterns, and project health</p>
         </div>
       </div>
 
       <div class="column is-half">
         <div class="feature-box">
-          <h4 class="title is-5">🎨 Modern UI</h4>
-          <p>Clean, Perplexity-inspired interface with light/dark theme support</p>
+          <h4 class="title is-5">🔒 Privacy-Preserving Local LLM</h4>
+          <p>Mistral 7B running locally via Ollama ensures data privacy and reproducibility</p>
         </div>
       </div>
 
       <div class="column is-half">
         <div class="feature-box">
-          <h4 class="title is-5">🔄 Real-Time Indexing</h4>
-          <p>Watch repository indexing progress with live status updates</p>
+          <h4 class="title is-5">💬 Interactive Conversational Interface</h4>
+          <p>Natural language dialogue with provenance metadata and source attribution</p>
         </div>
       </div>
     </div>
@@ -270,10 +288,11 @@
           <h4 class="title is-5">Backend</h4>
           <ul>
             <li><strong>Framework:</strong> FastAPI (Python)</li>
-            <li><strong>Vector Database:</strong> ChromaDB</li>
-            <li><strong>Embeddings:</strong> HuggingFace sentence-transformers</li>
-            <li><strong>LLM:</strong> Ollama (llama3.2) / Cloud providers</li>
-            <li><strong>Data Processing:</strong> pandas, BeautifulSoup4</li>
+            <li><strong>Vector Database:</strong> ChromaDB for document embeddings</li>
+            <li><strong>Embeddings:</strong> all-MiniLM-L6-v2 (sentence-transformers)</li>
+            <li><strong>LLM:</strong> Mistral 7B via Ollama (local inference)</li>
+            <li><strong>Intent Classifier:</strong> Five-stage hierarchical pipeline</li>
+            <li><strong>Data Processing:</strong> pandas, GitHub API, CSV caching</li>
           </ul>
         </div>
 
@@ -283,7 +302,8 @@
             <li><strong>Framework:</strong> React 18 with Vite</li>
             <li><strong>UI Library:</strong> Tailwind CSS</li>
             <li><strong>Animations:</strong> Framer Motion</li>
-            <li><strong>State Management:</strong> TanStack Query</li>
+            <li><strong>State Management:</strong> TanStack Query (React Query)</li>
+            <li><strong>Markdown:</strong> react-markdown with GitHub-flavored syntax</li>
             <li><strong>Icons:</strong> Lucide React</li>
           </ul>
         </div>
@@ -315,7 +335,7 @@ cp .env.example .env
 
 # Install Ollama (for local LLM)
 curl -fsSL https://ollama.com/install.sh | sh
-ollama pull llama3.2:1b
+ollama pull mistral:7b
 
 # Start the server
 ./start_dev.sh</code></pre>
@@ -381,19 +401,30 @@ npm run dev</code></pre>
 
     <div class="content has-text-justified">
       <p>
-        RepoWise builds upon research in retrieval-augmented generation, intent classification,
-        and open-source software analysis. Our work demonstrates that combining multiple data
-        sources (documentation, commits, issues) with intelligent routing significantly improves
-        the quality and relevance of answers compared to single-source approaches.
+        RepoWise represents a paradigm shift in open-source software analytics—moving from quantitative
+        monitoring to interactive, explainable inquiry. By coupling conversational retrieval with localized
+        LLM reasoning, the system transforms how developers, maintainers, and researchers interact with
+        repositories, fostering transparency and insight through dialogue rather than static visualization.
       </p>
+
+      <div class="feature-box">
+        <h4 class="title is-5">Use Cases</h4>
+        <ul>
+          <li><strong>Contributor Onboarding:</strong> Interactive guide answering procedural questions like "How do I open a pull request?" or "Where are the contribution guidelines?"</li>
+          <li><strong>Governance Analysis:</strong> Audit governance transparency, contributor engagement, and maintenance activity</li>
+          <li><strong>Repository Forensics:</strong> Trace provenance and evolution of decisions, verify licensing, detect outdated guidelines</li>
+          <li><strong>Community Health Assessment:</strong> Identify active/inactive contributors, sustainability risks, and governance best practices</li>
+        </ul>
+      </div>
 
       <div class="feature-box">
         <h4 class="title is-5">Key Research Contributions</h4>
         <ul>
-          <li>Novel intent classification system for OSS queries</li>
-          <li>Multi-modal RAG architecture combining structured and unstructured data</li>
-          <li>Efficient two-stage search using Matryoshka Representation Learning</li>
-          <li>Comprehensive evaluation on real-world OSS repositories</li>
+          <li>Five-stage intent classification pipeline with 86.4% accuracy</li>
+          <li>Dual retrieval architecture combining semantic RAG and structured CSV data</li>
+          <li>Evidence-grounded reasoning with anti-hallucination mechanisms</li>
+          <li>Local LLM inference for privacy-preserving, reproducible analysis</li>
+          <li>Conversational framework for governance and sustainability forensics</li>
         </ul>
       </div>
     </div>
