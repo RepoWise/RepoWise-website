@@ -48,4 +48,4 @@ Upload the repository contents to your preferred static hosting provider. Be sur
 
 ## License
 
-This project does not currently specify a license. If you plan to publish or distribute the site, consider adding an appropriate license file.
+This project is licensed under the [MIT License](LICENSE), permitting reuse, modification, and distribution with appropriate attribution.
