@@ -112,6 +112,12 @@
                 </a>
               </span>
               <span class="link-block">
+                <a href="#prompt-templates" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fas fa-scroll"></i></span>
+                  <span>Prompt Templates</span>
+                </a>
+              </span>
+              <span class="link-block">
                 <a href="#architecture" class="external-link button is-normal is-rounded is-dark">
                   <span class="icon"><i class="fas fa-diagram-project"></i></span>
                   <span>Architecture</span>
@@ -236,6 +242,461 @@
           </li>
         </ul>
       </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="prompt-templates">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Prompt Templates</h2>
+
+    <div class="content">
+      <p>
+        Each query is transformed into a task-specific prompt composed of five modular components. RepoWise currently
+        defines eight intent-driven templates that balance factual grounding, task specialization, and evidence transparency.
+      </p>
+
+      <h3 class="title is-4">Template Routing</h3>
+      <p class="has-text-justified">
+        Intent classification determines which prompt template is assembled. Out-of-scope requests are handled directly,
+        while documentation, statistical, and general inquiries leverage structured or semantic retrieval pipelines.
+      </p>
+      <div class="table-container">
+        <table class="table is-fullwidth is-striped is-hoverable">
+          <thead>
+            <tr>
+              <th>Intent</th>
+              <th>Template</th>
+              <th class="has-text-right">Tokens</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>OUT_OF_SCOPE</code></td>
+              <td>Direct response (no LLM)</td>
+              <td class="has-text-right">0</td>
+            </tr>
+            <tr>
+              <td><code>PROJECT_DOC_BASED</code> (WHO)</td>
+              <td>WHO</td>
+              <td class="has-text-right">&sim;2000</td>
+            </tr>
+            <tr>
+              <td><code>PROJECT_DOC_BASED</code> (HOW)</td>
+              <td>HOW</td>
+              <td class="has-text-right">&sim;2000</td>
+            </tr>
+            <tr>
+              <td><code>PROJECT_DOC_BASED</code> (WHAT)</td>
+              <td>WHAT</td>
+              <td class="has-text-right">&sim;2000</td>
+            </tr>
+            <tr>
+              <td><code>PROJECT_DOC_BASED</code> (LIST)</td>
+              <td>LIST</td>
+              <td class="has-text-right">&sim;2000</td>
+            </tr>
+            <tr>
+              <td><code>COMMITS</code></td>
+              <td>COMMITS</td>
+              <td class="has-text-right">&sim;1000</td>
+            </tr>
+            <tr>
+              <td><code>ISSUES</code></td>
+              <td>ISSUES</td>
+              <td class="has-text-right">&sim;1000</td>
+            </tr>
+            <tr>
+              <td><code>GENERAL</code></td>
+              <td>GENERAL</td>
+              <td class="has-text-right">&sim;900</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="title is-4">Component Structure</h3>
+      <p class="has-text-justified">
+        Every template combines universal guardrails with task-specific context. The table below summarizes how each
+        component contributes to grounded, verifiable answers.
+      </p>
+      <div class="table-container">
+        <table class="table is-fullwidth is-striped is-hoverable">
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Purpose</th>
+              <th class="has-text-right">Tokens</th>
+              <th>Scope</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>System Role</td>
+              <td>Establish analytical persona</td>
+              <td class="has-text-right">&sim;50</td>
+              <td>All</td>
+            </tr>
+            <tr>
+              <td>Task Instructions</td>
+              <td>Define extraction task</td>
+              <td class="has-text-right">500&ndash;1200</td>
+              <td>Specific</td>
+            </tr>
+            <tr>
+              <td>Anti-Hallucination</td>
+              <td>Constrain factual boundaries</td>
+              <td class="has-text-right">&sim;3000</td>
+              <td>All</td>
+            </tr>
+            <tr>
+              <td>Retrieved Context</td>
+              <td>Provide evidence base</td>
+              <td class="has-text-right">500&ndash;4000</td>
+              <td>Specific</td>
+            </tr>
+            <tr>
+              <td>User Question</td>
+              <td>Present query</td>
+              <td class="has-text-right">50&ndash;200</td>
+              <td>All</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="title is-4">Component Templates</h3>
+      <h4 class="title is-5">Component 1: System Role (Universal, &sim;50 tokens)</h4>
+      <pre><code>You are a precise document analyst for the {project_name} project.</code></pre>
+      <p><strong>Principle:</strong> Establishes domain-specific context. Identical across all templates to ensure consistent analytical framing.</p>
+
+      <h4 class="title is-5">Component 2: Task Instructions (Template-Specific)</h4>
+      <p>The second component tailors the extraction strategy to the user&rsquo;s intent.</p>
+
+      <h5 class="title is-6">WHO Template (&sim;1000 tokens)</h5>
+      <pre><code>TASK: ENTITY EXTRACTION - Extract names, emails, GitHub usernames, and roles
+
+1. Search the documents below for actual names, email addresses, and GitHub usernames.
+2. Look for these patterns:
+   - @username (GitHub usernames)
+   - Name &lt;email@example.com&gt; (name with email)
+   - "Maintained by: Name" (explicit roles)
+   - "Team: [list of names]" (team structures)
+   - "Contact: email@domain.com" (contact information)
+
+3. ONLY extract what explicitly appears in the documents.
+4. DO NOT invent names or assume maintainers.
+5. DO NOT guess email addresses or GitHub usernames.
+
+6. If no names found, state: "Based on the available project documents, I cannot find information about maintainers. The following documents were searched: [list documents]."
+
+7. Distinguish between:
+   - Project maintainers (ongoing stewardship)
+   - Original authors/creators (historical)
+   - Contributors (code contributions)
+   - Organization/foundation (ownership)</code></pre>
+      <p><strong>Principle:</strong> Pattern-based entity extraction prevents hallucination of maintainer identities. Explicit role distinction clarifies governance structure.</p>
+
+      <h5 class="title is-6">HOW Template (&sim;1200 tokens)</h5>
+      <pre><code>TASK: PROCEDURAL EXTRACTION - Extract step-by-step instructions
+
+1. Extract the exact procedure/steps from the documents.
+2. Present steps in sequential order (numbered or bulleted).
+3. Include prerequisites if mentioned in documents.
+4. Include links, references, or commands if provided.
+5. Preserve the structure: setup → process → completion.
+
+6. DO NOT add steps not explicitly stated in documents.
+7. DO NOT assume standard practices not documented.
+
+8. If procedure is incomplete, acknowledge gaps: "Steps X-Y are not documented."
+
+9. If no procedure found, state: "Based on the available project documents, I cannot find a documented process for [topic]. The following documents were searched: [list documents]."
+
+10. For multi-step processes, indicate:
+    - Required actions (MUST do)
+    - Optional actions (MAY do)
+    - Conditional actions (IF condition, THEN do)</code></pre>
+      <p><strong>Principle:</strong> Sequential ordering with explicit requirement levels (MUST/MAY/IF) preserves procedural fidelity and acknowledges incomplete documentation.</p>
+
+      <h5 class="title is-6">WHAT Template (&sim;1000 tokens)</h5>
+      <pre><code>TASK: INFORMATION EXTRACTION - Extract specific information
+
+1. Extract the exact information requested from documents.
+2. Quote directly from documents when possible.
+3. Include relevant details:
+   - Dates or version numbers if applicable
+   - Requirements or constraints
+   - Exceptions or special cases
+
+4. Provide document citations for all information.
+
+5. DO NOT paraphrase unless necessary for clarity.
+6. DO NOT combine information from multiple documents unless they complement each other.
+
+7. If information is ambiguous, present all interpretations.
+
+8. If information not found, state: "Based on the available project documents, I cannot find information about [topic]. The following documents were searched: [list documents]."
+
+9. For policies or rules:
+   - State the policy clearly
+   - Include any exceptions
+   - Cite the authoritative document</code></pre>
+      <p><strong>Principle:</strong> Direct quotation and multi-source acknowledgment preserve information accuracy and handle ambiguity transparently.</p>
+
+      <h5 class="title is-6">LIST Template (&sim;1100 tokens)</h5>
+      <pre><code>TASK: LIST EXTRACTION - Extract and format lists
+
+1. Extract ALL items that match the question.
+2. Format as bulleted or numbered list (preserve original format if specified).
+3. Include descriptions or explanations if provided in documents.
+4. Group related items if the document groups them.
+5. Preserve hierarchical structure if present (main items, sub-items, detailed points).
+6. Preserve order if specified in documents (e.g., "priority order", "sequence").
+
+7. DO NOT add items not explicitly in documents.
+8. DO NOT reorganize items unless necessary for clarity.
+
+9. If list is incomplete, state: "Partial list provided. Complete list may not be documented."
+
+10. If no list found, state: "Based on the available project documents, I cannot find a list of [topic]. The following documents were searched: [list documents]."
+
+11. For each item, include:
+    - The item name/title
+    - Brief description (if provided)
+    - Requirements or conditions (if applicable)</code></pre>
+      <p><strong>Principle:</strong> Structure preservation with explicit incompleteness handling maintains list fidelity and avoids arbitrary reordering.</p>
+
+      <h5 class="title is-6">COMMITS Template (&sim;800 tokens)</h5>
+      <pre><code>TASK: COMMIT DATA ANALYSIS - Analyze commit and contributor data
+
+1. Analyze the CSV data provided below.
+2. Answer questions based on commit statistics.
+3. Include relevant information:
+   - Commit dates and timestamps
+   - Author names and emails
+   - File changes (added, modified, deleted)
+   - Commit messages and descriptions
+
+4. For ranking queries ("top N contributors"):
+   - Sort by relevant metric (commit count, file changes, etc.)
+   - Provide top N as requested
+
+5. For temporal queries ("latest commits", "recent activity"):
+   - Sort by date/timestamp
+   - Include timeframe in response
+
+6. Calculate statistics when needed:
+   - Counts
+   - Averages
+   - Trends
+
+7. If data is unavailable, state: "Commit data is not available for this project."</code></pre>
+      <p><strong>Example Context (CSV format):</strong></p>
+      <pre><code>COMMIT DATA FOR vercel-swr:
+
+| commit_id | author | author_email   | date            | message                | files_changed | additions | deletions |
+|-----------|--------|----------------|-----------------|------------------------|---------------|-----------|-----------|
+| abc123... | john   | j@example.com  | 2025-01-15 14:30 | Fix bug in parser      | 3             | 45        | 12        |
+| def456... | jane   | jane@ex.com    | 2025-01-14 09:15 | Add new feature        | 7             | 234       | 18        |
+| ghi789... | john   | j@example.com  | 2025-01-13 11:20 | Update docs            | 1             | 8         | 2         |</code></pre>
+      <p><strong>Example Query:</strong> “Who are the top contributors?”</p>
+      <p><strong>Expected Response:</strong></p>
+      <pre><code>Top contributors for vercel-swr based on commit count:
+
+1. john (j@example.com) - 2 commits, 53 additions, 14 deletions
+2. jane (jane@ex.com) - 1 commit, 234 additions, 18 deletions</code></pre>
+      <p><strong>Principle:</strong> CSV-based retrieval enables direct aggregation, sorting, and ranking operations that are computationally inefficient with semantic search. Structured data maintains precise numerical relationships without semantic approximation.</p>
+
+      <h5 class="title is-6">ISSUES Template (&sim;800 tokens)</h5>
+      <pre><code>TASK: ISSUE DATA ANALYSIS - Analyze issue and discussion data
+
+1. Analyze the CSV data provided below.
+2. Answer questions based on issue statistics.
+3. Include relevant information:
+   - Issue titles and descriptions
+   - Comment counts and discussion activity
+   - Issue state (open, closed)
+   - Labels and tags
+   - Created/closed dates
+
+4. For ranking queries ("most commented issues"):
+   - Sort by the relevant metric
+   - Provide top N as requested
+
+5. For filtering queries ("open issues", "high-priority"):
+   - Filter by state, labels, or other criteria
+   - Include counts
+
+6. Calculate statistics when needed:
+   - Counts
+   - Ratios
+   - Trends
+
+7. If data is unavailable, state: "Issue data is not available for this project."</code></pre>
+      <p><strong>Example Context (CSV format):</strong></p>
+      <pre><code>ISSUE DATA FOR vercel-swr:
+
+| issue_id | title                        | author | comments | state  | labels             | created_at  | closed_at   |
+|----------|------------------------------|--------|----------|--------|--------------------|-------------|-------------|
+| #123     | Bug: Parser fails on edge    | user1  | 45       | open   | bug,high-priority  | 2025-01-10  | null        |
+| #124     | Feature: Add export func     | user2  | 32       | closed | enhancement        | 2025-01-08  | 2025-01-12  |
+| #125     | Question: Configure cache?   | user3  | 18       | open   | question           | 2025-01-09  | null        |</code></pre>
+      <p><strong>Example Query:</strong> “Which issues have the most comments?”</p>
+      <p><strong>Expected Response:</strong></p>
+      <pre><code>Most commented issues for vercel-swr:
+
+1. #123: "Bug: Parser fails on edge case" (45 comments, open)
+   Labels: bug, high-priority
+   Created: January 10, 2025
+
+2. #124: "Feature: Add export functionality" (32 comments, closed)
+   Labels: enhancement
+   Created: January 8, 2025 | Closed: January 12, 2025
+
+3. #125: "Question: How to configure cache?" (18 comments, open)
+   Labels: question
+   Created: January 9, 2025</code></pre>
+      <p><strong>Principle:</strong> CSV format enables precise filtering, sorting, and aggregation across issue metadata. Structured tables preserve exact numeric values critical for ranking queries.</p>
+
+      <h5 class="title is-6">Why CSV over RAG for COMMITS/ISSUES</h5>
+      <ol>
+        <li><strong>Aggregation:</strong> Computing “top N” requires sorting entire datasets, not retrieving top-5 chunks.</li>
+        <li><strong>Precision:</strong> Numeric operations (counts, sums, averages) need exact values, not semantic similarity.</li>
+        <li><strong>Multi-field filtering:</strong> Queries like “open issues with &gt;10 comments and label=bug” require Boolean logic across columns.</li>
+        <li><strong>Temporal ordering:</strong> Chronological sorting by date is a structured operation, not a semantic one.</li>
+        <li><strong>Performance:</strong> Table scans with indexing outperform vector similarity search for statistical queries.</li>
+      </ol>
+
+      <h5 class="title is-6">GENERAL Template (&sim;500 tokens)</h5>
+      <pre><code>TASK: PROVIDE GENERAL GUIDANCE - Help with general programming questions
+
+1. Provide helpful, accurate information based on software engineering best practices.
+2. Reference widely-accepted standards when applicable.
+3. Keep answers concise and actionable.
+4. Provide examples if helpful.
+
+5. DO NOT make project-specific claims without evidence.
+6. DO NOT assume user's context or requirements.
+
+7. If question is too broad, ask for clarification or provide high-level overview.
+8. Acknowledge when multiple valid approaches exist.</code></pre>
+      <p><strong>Principle:</strong> Generic guidance without project assumptions acknowledges technical diversity and avoids false specificity.</p>
+
+      <h4 class="title is-5">Component 3: Anti-Hallucination Rules (Universal, &sim;3000 tokens)</h4>
+      <pre><code>CRITICAL INSTRUCTIONS - FOLLOW EXACTLY:
+
+1. INFORMATION SOURCE
+   Your ONLY source of information is the project documents provided below in the "AVAILABLE GOVERNANCE DOCUMENTS" or data tables section.
+
+   Do not:
+   - Use external knowledge, training data, or general information about similar projects
+   - Assume information based on common practices in open source
+   - Reference information from previous conversations or other projects
+
+2. HANDLING MISSING INFORMATION
+   If information is NOT in the provided documents, respond exactly like this:
+
+   "Based on the available project documents, I cannot find information about [specific topic]. The following documents were searched: [list document names]."
+
+   Never:
+   - Say "typically", "usually", or similar generalization words
+   - Fill gaps with assumptions
+   - Suggest what the project "should" have without evidence
+
+3. SOURCE ATTRIBUTION
+   Always cite which specific document contains the information using:
+   - "According to [DOCUMENT_NAME], ..."
+   - If information appears in multiple documents, cite all sources
+
+4. PRECISION OVER SPECULATION
+   - Only state what the documents explicitly say
+   - If ambiguous, acknowledge ambiguity
+   - Do not extrapolate beyond what is written
+   - Quote directly when precision is critical
+
+5. DOCUMENT SCOPE
+   - Only use the documents provided in this prompt
+   - Do not reference documents that might exist but are not provided
+   - If a relevant document seems to be missing, state that it may be in the missing document type
+
+6. NO ASSUMPTIONS ABOUT PROJECT STRUCTURE
+   Do not assume:
+   - Organizational structure
+   - Roles or responsibilities
+   - Development processes
+   - Technical decisions
+
+   Unless explicitly documented.
+
+7. EXPLICIT UNCERTAINTY
+   State:
+   - Conflicts when documents disagree
+   - What is missing when information is partial
+
+   Use phrases like:
+   - "partially documented"
+   - "not fully specified"
+   - "unclear from available documents"
+   - "requires clarification"</code></pre>
+      <p><strong>Principle:</strong> A seven-rule constraint system prioritizes factual accuracy over completeness. Explicit missing-information protocols prevent hallucination and maintain consistent factual standards.</p>
+
+      <h4 class="title is-5">Component 4: Retrieved Context (Template-Specific)</h4>
+      <h5 class="title is-6">PROJECT_DOC Templates (&sim;3000 tokens)</h5>
+      <pre><code>AVAILABLE GOVERNANCE DOCUMENTS FOR {project_name}:
+
+[README] README.md:
+# SWR - React Hooks for Data Fetching
+
+SWR is a React Hooks library for data fetching. The name "SWR" is derived from stale-while-revalidate, a cache invalidation strategy...
+
+[CONTRIBUTING] CONTRIBUTING.md:
+# Contributing to SWR
+
+Thanks for your interest in contributing to SWR! Please follow these guidelines...
+
+[CODE_OF_CONDUCT] .github/CODE_OF_CONDUCT.md:
+# Contributor Covenant Code of Conduct
+
+## Our Pledge
+We as members, contributors, and leaders pledge to make participation...
+
+[LICENSE] LICENSE:
+MIT License
+Copyright (c) 2025 Vercel, Inc.
+...</code></pre>
+      <p><strong>Retrieval Process:</strong></p>
+      <ol>
+        <li>Query embedding (all-MiniLM-L6-v2, 384 dimensions)</li>
+        <li>Vector similarity search (ChromaDB)</li>
+        <li>Hybrid reranking (semantic + keyword + recency)</li>
+        <li>Top-5 chunks assembled (&sim;3000 tokens)</li>
+      </ol>
+
+      <h5 class="title is-6">COMMITS/ISSUES Templates (&sim;500&ndash;1000 tokens)</h5>
+      <p>See CSV format examples in the Task Instructions above.</p>
+      <p><strong>Data Source:</strong> GitHub API → Local CSV cache.</p>
+
+      <h5 class="title is-6">GENERAL Template (&sim;200 tokens)</h5>
+      <pre><code>CONTEXT:
+This is a general programming/development question not specific to a particular project.
+Provide helpful, accurate information based on software engineering best practices.
+The user has not selected a specific project, so avoid making project-specific claims.</code></pre>
+
+      <h4 class="title is-5">Component 5: User Question (Universal, &sim;50&ndash;200 tokens)</h4>
+      <pre><code>USER QUESTION: {question}
+
+Your answer:</code></pre>
+      <p><strong>Principle:</strong> Clear separation between instructions and query ensures a consistent generation cue across all templates.</p>
+
+      <h3 class="title is-4">Design Rationale</h3>
+      <ul>
+        <li><strong>Modularity:</strong> Universal components (System Role, Anti-Hallucination, User Question) pair with task-specific instructions and context to enable rapid template extension.</li>
+        <li><strong>Factual Grounding:</strong> Extensive anti-hallucination guidance (&sim;37.5% of total prompt) prioritizes accuracy over fluency.</li>
+        <li><strong>Task Specialization:</strong> Distinct WHO/HOW/WHAT/LIST instructions optimize extraction for entities, procedures, facts, and lists.</li>
+        <li><strong>Structured vs. Semantic Retrieval:</strong> CSV format for COMMITS/ISSUES enables SQL-like aggregation, sorting, and filtering that semantic search cannot perform efficiently.</li>
+        <li><strong>Evidence Transparency:</strong> Mandatory source attribution supports independent verification and reproducible analysis.</li>
+      </ul>
     </div>
   </div>
 </section>
