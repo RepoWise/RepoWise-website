@@ -3,6 +3,8 @@ const PLACEHOLDER_BASES = new Set([
   'http://your-backend-domain.com',
   'https://example.com',
   'http://example.com',
+  'https://your-domain.example',
+  'http://your-domain.example',
   'null'
 ]);
 
@@ -15,7 +17,26 @@ function normalizeBase(base) {
   return base.trim().replace(/\/+$/, '');
 }
 
-function collectConfiguredBases() {
+async function loadEnvApiBase() {
+  try {
+    const response = await fetch('.env', { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`.env fetch failed with status ${response.status}`);
+    }
+
+    const envText = await response.text();
+    const match = envText.match(/^VITE_API_BASE_URL\s*=\s*(.+)$/m);
+    if (match && match[1]) {
+      return normalizeBase(match[1]);
+    }
+  } catch (error) {
+    console.warn('Unable to load VITE_API_BASE_URL from .env', error);
+  }
+
+  return '';
+}
+
+async function collectConfiguredBases() {
   const bases = [];
 
   const addBase = (value) => {
@@ -28,6 +49,9 @@ function collectConfiguredBases() {
     }
     bases.push(normalizeBase(trimmed));
   };
+
+  const envBase = await loadEnvApiBase();
+  addBase(envBase);
 
   if (scriptElement && scriptElement.dataset) {
     addBase(scriptElement.dataset.apiBase);
@@ -51,7 +75,7 @@ function collectConfiguredBases() {
   return uniqueBases;
 }
 
-const API_BASES = collectConfiguredBases();
+const API_BASES_PROMISE = collectConfiguredBases();
 
 function joinUrl(base, path) {
   if (!base) {
@@ -66,7 +90,9 @@ function joinUrl(base, path) {
 async function fetchWithFallback(path, options) {
   let lastError = null;
 
-  for (const base of API_BASES) {
+  const apiBases = await API_BASES_PROMISE;
+
+  for (const base of apiBases) {
     const url = joinUrl(base, path);
 
     try {
