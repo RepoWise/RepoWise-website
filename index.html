@@ -26,11 +26,139 @@
   <style>
     ol li { margin-bottom: 1em; }
     a { text-decoration: none; }
-    body { font-size: 18px; }
+
+    /* Base theme (light) */
+    body {
+      font-size: 18px;
+      background-color: #ffffff;
+      color: #111827;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
     .diagram-container { margin: 2em 0; text-align: center; }
-    .diagram-container img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .feature-box { padding: 1.5em; background: #f8f9fa; border-radius: 8px; margin: 1em 0; }
-    .hero-logo { font-size: 3.5em; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .diagram-container img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .feature-box {
+      padding: 1.5em;
+      background: #f8f9fa;
+      border-radius: 8px;
+      margin: 1em 0;
+      transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    }
+    .hero-logo {
+      font-size: 3.5em;
+      font-weight: bold;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* --- Dark mode overrides --- */
+    body.dark-mode {
+      background-color: #020617; /* slate-950 */
+      color: #e5e7eb;            /* gray-200 */
+    }
+
+    body.dark-mode a {
+      color: #93c5fd; /* blue-300 */
+    }
+
+    body.dark-mode .navbar,
+    body.dark-mode .hero,
+    body.dark-mode .section,
+    body.dark-mode .footer {
+      background-color: #020617;
+      color: #e5e7eb;
+    }
+
+    body.dark-mode .navbar-item,
+    body.dark-mode .navbar-link {
+      color: #e5e7eb;
+    }
+
+    body.dark-mode .navbar-dropdown {
+      background-color: #020617;
+      border: 1px solid #1f2937;
+    }
+
+    body.dark-mode .navbar-dropdown .navbar-item:hover {
+      background-color: #111827;
+    }
+
+    body.dark-mode .box {
+      background-color: #020617;
+      color: #e5e7eb;
+      border: 1px solid #1f2937;
+    }
+
+    body.dark-mode .feature-box {
+      background-color: #020617;
+      color: #e5e7eb;
+      border: 1px solid #1f2937;
+    }
+
+    body.dark-mode .table {
+      background-color: #020617;
+      color: #e5e7eb;
+    }
+
+    body.dark-mode .table thead th {
+      background-color: #020617;
+      color: #e5e7eb;
+      border-color: #1f2937;
+    }
+
+    body.dark-mode .table tbody td {
+      border-color: #1f2937;
+    }
+
+    body.dark-mode pre,
+    body.dark-mode code {
+      background-color: #020617 !important;
+      color: #e5e7eb;
+      border-color: #1f2937;
+    }
+
+    body.dark-mode .footer {
+      border-top: 1px solid #1f2937;
+    }
+
+    body.dark-mode .tag.is-link.is-light {
+      background-color: #1d4ed8;
+      color: #e5e7eb;
+    }
+
+    body.dark-mode .tag.is-info.is-light {
+      background-color: #0369a1;
+      color: #e5e7eb;
+    }
+
+    body.dark-mode .button.is-primary {
+      background-color: #2563eb;
+      border-color: #2563eb;
+      color: #e5e7eb;
+    }
+
+    body.dark-mode .button.is-dark {
+      background-color: #0f172a;
+      border-color: #0f172a;
+    }
+
+    /* Theme toggle button specific tweaks */
+    #theme-toggle {
+      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+
+    body.dark-mode #theme-toggle.is-light {
+      background-color: #111827;
+      border-color: #374151;
+      color: #e5e7eb;
+    }
   </style>
 </head>
 <body>
@@ -57,20 +185,17 @@
         </div>
       </div>
 
-
       <div class="navbar-item has-dropdown is-hoverable">
         <a class="navbar-link">
           Previously Built Tools
         </a>
         <div class="navbar-dropdown">
-          
           <a class="navbar-item" href="https://ossustain.github.io/APEX/" target="_blank">
             APEX
           </a>
           <a class="navbar-item" href="https://swatisinghvi99.github.io/EPEX/" target="_blank">
             EPEX
           </a>
-          
           <a class="navbar-item" href="https://ossreacts.netlify.app/" target="_blank">
             ReACTive
           </a>
@@ -79,7 +204,6 @@
           </a>
         </div>
       </div>
-
 
       <div class="navbar-item has-dropdown is-hoverable">
         <a class="navbar-link">
@@ -93,7 +217,7 @@
           <a class="navbar-item" href="https://dl.acm.org/doi/abs/10.1145/3524842.3528506" target="_blank">
             APEX
           </a>
-        
+
           <a class="navbar-item" href="https://dl.acm.org/doi/abs/10.1145/3663529.3663777" target="_blank">
             Researched ACTionable (ReACT)
           </a>
@@ -103,7 +227,15 @@
 
     <div class="navbar-end">
       <div class="navbar-item">
-        <div class="buttons">
+        <div class="buttons" style="align-items: center; gap: 0.5rem;">
+          <!-- Theme toggle button (top right) -->
+          <button class="button is-light is-rounded" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+            <span class="icon" id="theme-toggle-icon">
+              <i class="fas fa-moon"></i>
+            </span>
+            <span id="theme-toggle-text">Dark</span>
+          </button>
+
           <a class="button is-primary is-rounded" href="https://github.com/RepoWise" target="_blank">
             <span class="icon"><i class="fab fa-github"></i></span>
             <span>GitHub</span>
@@ -1054,6 +1186,56 @@ npm run dev</code></pre>
   if (yearElement) {
     yearElement.textContent = new Date().getFullYear();
   }
+
+  // --- Dark mode toggle logic ---
+  (function () {
+    const body = document.body;
+    const toggleBtn = document.getElementById('theme-toggle');
+    const iconSpan = document.getElementById('theme-toggle-icon');
+    const textSpan = document.getElementById('theme-toggle-text');
+
+    if (!toggleBtn || !iconSpan || !textSpan) return;
+
+    function applyTheme(theme) {
+      const isDark = theme === 'dark';
+
+      if (isDark) {
+        body.classList.add('dark-mode');
+      } else {
+        body.classList.remove('dark-mode');
+      }
+
+      // Update button appearance
+      if (isDark) {
+        toggleBtn.classList.remove('is-light');
+        toggleBtn.classList.add('is-dark');
+        iconSpan.innerHTML = '<i class="fas fa-sun"></i>';
+        textSpan.textContent = 'Light';
+      } else {
+        toggleBtn.classList.remove('is-dark');
+        toggleBtn.classList.add('is-light');
+        iconSpan.innerHTML = '<i class="fas fa-moon"></i>';
+        textSpan.textContent = 'Dark';
+      }
+
+      localStorage.setItem('repowise-theme', theme);
+    }
+
+    // Initialize from localStorage or system preference
+    const storedTheme = localStorage.getItem('repowise-theme');
+    if (storedTheme === 'dark' || storedTheme === 'light') {
+      applyTheme(storedTheme);
+    } else {
+      const prefersDark = window.matchMedia &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches;
+      applyTheme(prefersDark ? 'dark' : 'light');
+    }
+
+    toggleBtn.addEventListener('click', function () {
+      const isDark = body.classList.contains('dark-mode');
+      applyTheme(isDark ? 'light' : 'dark');
+    });
+  })();
 </script>
 
 </body>
