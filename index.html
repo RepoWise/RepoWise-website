@@ -1041,7 +1041,7 @@ npm run dev</code></pre>
         <strong>RepoWise</strong> - Where OSS Exploration Begins
       </p>
       <p class="is-size-7">
-        © 2024 DECAL Lab, UC Davis. Released under MIT License.
+        © <span id="current-year"></span> DECAL Lab, UC Davis. Released under MIT License.
       </p>
     </div>
   </div>
@@ -1049,6 +1049,12 @@ npm run dev</code></pre>
 
 <script src="./static/js/user-count.js"></script>
 <script src="./static/js/view-counter.js"></script>
+<script>
+  const yearElement = document.getElementById("current-year");
+  if (yearElement) {
+    yearElement.textContent = new Date().getFullYear();
+  }
+</script>
 
 </body>
 </html>
