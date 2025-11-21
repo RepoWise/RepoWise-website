@@ -1,4 +1,4 @@
-const PROCESSED_REPO_COUNT_ENDPOINT = '/api/processed-repo-count';
+const PROCESSED_REPO_COUNT_ENDPOINT = 'https://tianna-unretractive-ellen.ngrok-free.dev/api/processed-repo-count';
 
 function updateProcessedRepoCountElement(value) {
   const element = document.getElementById('processed-repo-count');
