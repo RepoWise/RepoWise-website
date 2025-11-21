@@ -78,16 +78,62 @@
 
     body.dark-mode .navbar-item,
     body.dark-mode .navbar-link {
-      color: #e5e7eb;
+      color: #e5e7eb !important;
+    }
+
+    /* Ensure navbar-link specifically has good contrast */
+    body.dark-mode .navbar-item.has-dropdown .navbar-link,
+    body.dark-mode .navbar-item .navbar-link {
+      color: #f3f4f6 !important;
+      font-weight: 500;
+    }
+
+    /* Active/hover state for navbar-link */
+    body.dark-mode .navbar-link:hover,
+    body.dark-mode .navbar-item.has-dropdown:hover .navbar-link {
+      color: #ffffff !important;
+      background-color: #1f2937 !important;
     }
 
     body.dark-mode .navbar-dropdown {
-      background-color: #020617;
-      border: 1px solid #1f2937;
+      background-color: #111827 !important;
+      border: 1px solid #374151;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
     }
 
-    body.dark-mode .navbar-dropdown .navbar-item:hover {
-      background-color: #111827;
+    body.dark-mode .navbar-dropdown .navbar-item {
+      color: #e5e7eb !important;
+      background-color: #111827 !important;
+    }
+
+    /* Target anchor tags specifically within dropdown items */
+    body.dark-mode .navbar-dropdown a.navbar-item,
+    body.dark-mode .navbar-dropdown .navbar-item a {
+      color: #e5e7eb !important;
+      background-color: #111827 !important;
+    }
+
+    body.dark-mode .navbar-dropdown .navbar-item:hover,
+    body.dark-mode .navbar-dropdown a.navbar-item:hover {
+      background-color: #1f2937 !important;
+      color: #ffffff !important;
+    }
+
+    body.dark-mode .navbar-link:not(.is-arrowless)::after {
+      border-color: #e5e7eb !important;
+    }
+
+    /* Additional specificity for stubborn Bulma overrides */
+    body.dark-mode .navbar.is-transparent .navbar-dropdown a.navbar-item,
+    body.dark-mode .navbar .navbar-dropdown a.navbar-item {
+      color: #e5e7eb !important;
+    }
+
+    /* Ensure hover state always works */
+    body.dark-mode .navbar-dropdown a.navbar-item:hover,
+    body.dark-mode .navbar-dropdown a.navbar-item:focus {
+      background-color: #1f2937 !important;
+      color: #ffffff !important;
     }
 
     body.dark-mode .box {
@@ -145,8 +191,14 @@
     }
 
     body.dark-mode .button.is-dark {
-      background-color: #0f172a;
-      border-color: #0f172a;
+      background-color: #1f2937;
+      border-color: #374151;
+      color: #e5e7eb;
+    }
+
+    body.dark-mode .button.is-dark:hover {
+      background-color: #374151;
+      border-color: #4b5563;
     }
 
     /* Make previously black texts blue in dark mode */
@@ -171,6 +223,42 @@
       background-color: #111827;
       border-color: #374151;
       color: #e5e7eb;
+    }
+
+    /* Ensure proper contrast for all links in dark mode */
+    body.dark-mode .publication-authors a,
+    body.dark-mode .author-block a {
+      color: #60a5fa !important;
+    }
+
+    body.dark-mode .publication-authors a:hover,
+    body.dark-mode .author-block a:hover {
+      color: #93c5fd !important;
+    }
+
+    /* Ensure department text is visible */
+    body.dark-mode .is-size-6 {
+      color: #9ca3af !important;
+    }
+
+    /* Navbar brand text */
+    body.dark-mode .navbar-brand {
+      color: #e5e7eb;
+    }
+
+    /* Ensure all headings are visible */
+    body.dark-mode h1,
+    body.dark-mode h2,
+    body.dark-mode h3,
+    body.dark-mode h4,
+    body.dark-mode h5,
+    body.dark-mode h6 {
+      color: #e5e7eb !important;
+    }
+
+    /* Hero subtitle specific styling */
+    body.dark-mode .subtitle {
+      color: #d1d5db !important;
     }
   </style>
 </head>
