@@ -40,6 +40,15 @@ Any static server will work. Here are a few common choices:
 
 Upload the repository contents to your preferred static hosting provider. Be sure to include the `static/` directory so that styles, scripts, and diagrams load correctly.
 
+### View counter backend
+
+The view counter (`static/js/view-counter.js`) expects two endpoints on the configured API base:
+
+- `POST /api/record_view`
+- `GET /api/view_count`
+
+Set the API base via the `<meta name="ossprey-view-counter-api-base">` tag in `index.html` (or the `OSSPREY_VIEW_COUNTER_API_BASE` global). When hosting the backend, make sure CORS allows the site origin (e.g., `https://repowise.github.io` or `https://repowise.netlify.app`) so that browsers can call these endpoints successfully. If the backend uses different routes or methods, update the script to match.
+
 ## Contributing
 
 1. Fork the repository and create a feature branch.
