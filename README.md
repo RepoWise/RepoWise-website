@@ -58,3 +58,16 @@ Set the API base via the `<meta name="ossprey-view-counter-api-base">` tag in `i
 ## License
 
 This project is licensed under the [MIT License](LICENSE), permitting reuse, modification, and distribution with appropriate attribution.
+
+## Cite RepoWise
+
+If you use RepoWise in your work, please cite it as follows:
+
+```
+@software{RepoWise2025,
+  author       = {RepoWise contributors},
+  title        = {RepoWise — Repository sustainability tracker (website)},
+  year         = {2025},
+  url          = {https://repowise.github.io/RepoWise-website/},
+}
+```
