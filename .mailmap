@@ -1,0 +1,5 @@
+# .mailmap - Map contributor names and emails for proper attribution
+# This file helps ensure accurate contributor information in git logs
+
+# Exclude AI assistants from contributor attribution
+# Map any commits with Claude/Anthropic email to nobody
