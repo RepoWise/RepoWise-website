@@ -2,8 +2,8 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="description" content="RepoWise: AI-Powered OSS Documentation Assistant">
-  <meta name="keywords" content="OSS, AI, RAG, Open Source, Documentation">
+  <meta name="description" content="RepoWise: A conversational framework for mining and reasoning about project repositories with evidence-grounded, interpretable insights">
+  <meta name="keywords" content="OSS, Repository Mining, Conversational AI, RAG, Intent Classification, Open Source Analytics, Interpretability, Evidence-Grounded Reasoning">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="ossprey-view-counter-api-base" content="https://tianna-unretractive-ellen.ngrok-free.dev">
   <title>RepoWise - Where OSS Exploration Begins</title>
@@ -46,11 +46,12 @@
 
     .diagram-container { margin: 2em 0; text-align: center; }
     .diagram-container img {
-      max-width: 100%;
+      max-width: min(85%, 900px); /* Responsive: 85% of container or 900px max */
       height: auto;
       border: 1px solid #ddd;
       border-radius: 8px;
       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      cursor: zoom-in; /* Hint that images can be opened */
     }
     .feature-box {
       padding: 1.5em;
@@ -625,11 +626,11 @@
           <img src="./static/images/repowise-icon.png" alt="RepoWise Icon" style="max-width: 120px; margin-bottom: 1rem;">
           <h1 class="hero-logo">RepoWise</h1>
           <h2 class="subtitle is-4" style="margin-top: 1em;">
-            A Conversational Framework for Governance and Sustainability Analysis in Open-Source Projects
+            A Conversational Framework for Mining and Reasoning About Project Repositories
           </h2>
           <div class="is-size-5 publication-authors" style="margin-top: 1.5em;">
             <span class="author-block">
-              <a href="https://github.com/sankalpk112" style="color: #4a90e2;">Sankalp Kashyap</a>,
+              <a href="https://www.linkedin.com/in/sankalp-kashyap" style="color: #4a90e2;">Sankalp Kashyap</a>,
               <a href="https://github.com/arjashok" style="color: #4a90e2;">Arjun Ashok</a>,
               <a href="https://nafiz43.github.io/portfolio/" style="color: #4a90e2;">Nafiz Imtiaz Khan</a>, and
               <a href="https://web.cs.ucdavis.edu/~filkov/" style="color: #4a90e2;">Vladimir Filkov</a>
@@ -730,21 +731,25 @@
     <div class="content">
       <h3 class="title is-4">High-Level Overview</h3>
       <div class="diagram-container">
-        <img src="./static/diagrams/High_Level.png" alt="High-Level Architecture" />
-        <p class="has-text-centered"><em>Figure 1: High-level system architecture showing major components</em></p>
+        <a href="./static/diagrams/High_Level.png" target="_blank" title="Click to view full size">
+          <img src="./static/diagrams/High_Level.png" alt="High-Level Architecture" />
+        </a>
+        <p class="has-text-centered"><em>Figure 1: High-level system architecture showing major components (click to enlarge)</em></p>
       </div>
 
       <h3 class="title is-4">Detailed Architecture</h3>
       <div class="diagram-container">
-        <img src="./static/diagrams/ColorfulArchitecture.png" alt="Detailed Architecture" />
-        <p class="has-text-centered"><em>Figure 2: Detailed architecture with RAG pipeline and data flow</em></p>
+        <a href="./static/diagrams/ColorfulArchitecture.png" target="_blank" title="Click to view full size">
+          <img src="./static/diagrams/ColorfulArchitecture.png" alt="Detailed Architecture" />
+        </a>
+        <p class="has-text-centered"><em>Figure 2: Detailed architecture with RAG pipeline and data flow (click to enlarge)</em></p>
       </div>
 
       <div class="feature-box">
         <h4 class="title is-5">Core Components</h4>
         <ol>
           <li><strong>User Interface (Frontend):</strong> React-based chat interface for natural language queries</li>
-          <li><strong>Intent Classification Module:</strong> Five-stage hierarchical pipeline achieving 86.4% accuracy in routing queries</li>
+          <li><strong>Intent Classification Module:</strong> Five-stage hierarchical pipeline for routing queries</li>
           <li><strong>RAG Pipeline:</strong> Semantic search over project documentation using all-MiniLM-L6-v2 embeddings and ChromaDB</li>
           <li><strong>CSV Data Pipeline:</strong> Structured retrieval of commit and issue metadata via GitHub API</li>
           <li><strong>Prompt Assembly Engine:</strong> Merges retrieved context with anti-hallucination rules</li>
@@ -766,12 +771,14 @@
         should be processed by identifying its semantic intent and routing it to the corresponding retrieval engine.
         The classification mechanism follows a <strong>five-stage hierarchical logic</strong> that incrementally
         filters, analyzes, or refines the query based on linguistic and semantic cues until an appropriate intent
-        label is assigned, achieving <strong>86.4% accuracy</strong> across test repositories.
+        label is assigned.
       </p>
 
       <div class="diagram-container">
-        <img src="./static/diagrams/IntentClassificationFlow1.png" alt="Intent Classification Flow" />
-        <p class="has-text-centered"><em>Figure 3: Five-stage intent classification pipeline</em></p>
+        <a href="./static/diagrams/IntentClassificationFlow1.png" target="_blank" title="Click to view full size">
+          <img src="./static/diagrams/IntentClassificationFlow1.png" alt="Intent Classification Flow" />
+        </a>
+        <p class="has-text-centered"><em>Figure 3: Five-stage intent classification pipeline (click to enlarge)</em></p>
       </div>
 
       <div class="feature-box">
@@ -1295,8 +1302,8 @@ Your answer:</code></pre>
 
       <div class="column is-half">
         <div class="feature-box">
-          <h4 class="title is-5">📊 Governance & Sustainability Analysis</h4>
-          <p>Forensic-style reasoning over governance documents, contributor patterns, and project health</p>
+          <h4 class="title is-5">📊 Evidence-Grounded Repository Mining</h4>
+          <p>Forensic-style reasoning with source attribution, provenance tracking, and transparent citation of evidence</p>
         </div>
       </div>
 
@@ -1435,19 +1442,18 @@ npm run dev</code></pre>
 
     <div class="content has-text-justified">
       <p>
-        RepoWise represents a paradigm shift in open-source software analytics—moving from quantitative
-        monitoring to interactive, explainable inquiry. By coupling conversational retrieval with localized
-        LLM reasoning, the system transforms how developers, maintainers, and researchers interact with
-        repositories, fostering transparency and insight through dialogue rather than static visualization.
+        RepoWise represents a paradigm shift in repository analytics—moving from static metrics to interactive,
+        interpretable inquiry. By combining conversational retrieval with evidence-grounded LLM reasoning, the framework
+        enables stakeholders to ask natural-language questions and receive contextual, verifiable answers with source citations,
+        transforming how developers, maintainers, and researchers understand and navigate project repositories.
       </p>
 
       <div class="feature-box">
         <h4 class="title is-5">Use Cases</h4>
         <ul>
-          <li><strong>Contributor Onboarding:</strong> Interactive guide answering procedural questions like "How do I open a pull request?" or "Where are the contribution guidelines?"</li>
-          <li><strong>Governance Analysis:</strong> Audit governance transparency, contributor engagement, and maintenance activity</li>
-          <li><strong>Repository Forensics:</strong> Trace provenance and evolution of decisions, verify licensing, detect outdated guidelines</li>
-          <li><strong>Community Health Assessment:</strong> Identify active/inactive contributors, sustainability risks, and governance best practices</li>
+          <li><strong>Contributor Onboarding:</strong> New contributors ask procedural questions in natural language ("How do I submit a pull request?", "What coding standards should I follow?") and receive step-by-step guidance extracted directly from project documentation with exact citations</li>
+          <li><strong>Governance and Community Health:</strong> Maintainers query governance structure ("Who has commit access?"), contribution policies ("What's our code review process?"), and community dynamics ("Who are the most active contributors?") to assess transparency, engagement, and sustainability</li>
+          <li><strong>Repository Forensics:</strong> Researchers and auditors perform forensic analysis to trace decision provenance ("When was the license changed?"), verify compliance ("Are there any dual-licensed files?"), detect documentation drift, and investigate historical development patterns</li>
         </ul>
       </div>
 
@@ -1580,7 +1586,7 @@ npm run dev</code></pre>
   <div class="container">
     <div class="content has-text-centered">
       <p>
-        <strong>RepoWise</strong> - Where OSS Exploration Begins
+        <strong>RepoWise</strong> - Conversational Framework for Repository Mining and Reasoning
       </p>
       <p class="is-size-7">
         © <span id="current-year"></span> DECAL Lab, UC Davis. Released under MIT License.
