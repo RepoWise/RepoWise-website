@@ -30,9 +30,10 @@
     ol li { margin-bottom: 1em; }
     a { text-decoration: none; }
 
-    /* Smooth scrolling */
+    /* Smooth scrolling with offset for sticky navbar */
     html {
       scroll-behavior: smooth;
+      scroll-padding-top: 80px; /* Offset for sticky navbar height + breathing room */
     }
 
     /* Base theme (light) */
@@ -589,19 +590,19 @@
       <span class="icon"><i class="fas fa-rocket"></i></span>
       <span>Live</span>
     </a>
-    <a href="https://github.com/RepoWise/backend" class="quick-link" target="_blank">
+    <a href="https://github.com/orgs/RepoWise/repositories" class="quick-link" target="_blank">
       <span class="icon"><i class="fab fa-github"></i></span>
-      <span>Backend Code</span>
+      <span>Code</span>
     </a>
-    <a href="https://github.com/RepoWise/frontend" class="quick-link" target="_blank">
-      <span class="icon"><i class="fab fa-github"></i></span>
-      <span>Frontend Code</span>
+    <a href="#installation-setup" class="quick-link">
+      <span class="icon"><i class="fas fa-download"></i></span>
+      <span>Installation</span>
     </a>
     <a href="#prompt-templates" class="quick-link">
       <span class="icon"><i class="fas fa-scroll"></i></span>
       <span>Prompt Templates</span>
     </a>
-    <a href="https://github.com/RepoWise#contributing" class="quick-link" target="_blank">
+    <a href="./CONTRIBUTING.md" class="quick-link" target="_blank">
       <span class="icon"><i class="fas fa-hands-helping"></i></span>
       <span>Contribution Guide</span>
     </a>
@@ -609,7 +610,7 @@
       <span class="icon"><i class="fas fa-project-diagram"></i></span>
       <span>Architecture</span>
     </a>
-    <a href="#governance" class="quick-link">
+    <a href="GOVERNANCE.md" class="quick-link" target="_blank">
       <span class="icon"><i class="fas fa-landmark"></i></span>
       <span>Governance</span>
     </a>
@@ -647,15 +648,15 @@
                 </a>
               </span>
               <span class="link-block">
-                <a href="https://github.com/RepoWise/backend" class="external-link button is-normal is-rounded is-dark" target="_blank">
+                <a href="https://github.com/orgs/RepoWise/repositories" class="external-link button is-normal is-rounded is-dark" target="_blank">
                   <span class="icon"><i class="fab fa-github"></i></span>
-                  <span>Backend Code</span>
+                  <span>Code</span>
                 </a>
               </span>
               <span class="link-block">
-                <a href="https://github.com/RepoWise/frontend" class="external-link button is-normal is-rounded is-dark" target="_blank">
-                  <span class="icon"><i class="fab fa-github"></i></span>
-                  <span>Frontend Code</span>
+                <a href="#installation-setup" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fas fa-download"></i></span>
+                  <span>Installation</span>
                 </a>
               </span>
               <span class="link-block">
@@ -1329,8 +1330,6 @@ Your answer:</code></pre>
             <li><strong>Vector Database:</strong> ChromaDB for document embeddings</li>
             <li><strong>Embeddings:</strong> all-MiniLM-L6-v2 (sentence-transformers)</li>
             <li><strong>LLM:</strong> Mistral 7B via Ollama (local inference)</li>
-            <li><strong>Intent Classifier:</strong> Five-stage hierarchical pipeline</li>
-            <li><strong>Data Processing:</strong> pandas, GitHub API, CSV caching</li>
           </ul>
         </div>
 
@@ -1339,10 +1338,7 @@ Your answer:</code></pre>
           <ul>
             <li><strong>Framework:</strong> React 18 with Vite</li>
             <li><strong>UI Library:</strong> Tailwind CSS</li>
-            <li><strong>Animations:</strong> Framer Motion</li>
             <li><strong>State Management:</strong> TanStack Query (React Query)</li>
-            <li><strong>Markdown:</strong> react-markdown with GitHub-flavored syntax</li>
-            <li><strong>Icons:</strong> Lucide React</li>
           </ul>
         </div>
       </div>
