@@ -719,8 +719,8 @@
           <p>
             By combining conversational AI with OSS analytics, RepoWise offers an interpretable, interactive approach to understanding
             the social and technical dynamics of open-source development. The system automatically extracts and indexes governance
-            documents, contribution guidelines, commit data, and issue reports from GitHub repositories, then uses a five-stage intent
-            classification pipeline with dual retrieval engines to generate context-grounded, evidence-backed responses.
+            documents, contribution guidelines, commit data, and issue reports from GitHub repositories, then uses an LLM-based Few-Shot
+            Chain of Thought (CoT) intent classification with dual retrieval engines to generate context-grounded, evidence-backed responses.
           </p>
             <p>
           We’d really appreciate your thoughts on this tool. Please share your feedback here:&nbsp;
@@ -788,7 +788,7 @@
         <h4 class="title is-5">Core Components</h4>
         <ol>
           <li><strong>User Interface (Frontend):</strong> React-based chat interface for natural language queries</li>
-          <li><strong>Intent Classification Module:</strong> Five-stage hierarchical pipeline for routing queries</li>
+          <li><strong>Intent Classification Module:</strong> LLM-based Few-Shot Chain of Thought (CoT) classification achieving 97.6% accuracy</li>
           <li><strong>RAG Pipeline:</strong> Semantic search over project documentation using all-MiniLM-L6-v2 embeddings and ChromaDB</li>
           <li><strong>CSV Data Pipeline:</strong> Structured retrieval of commit and issue metadata via GitHub API</li>
           <li><strong>Prompt Assembly Engine:</strong> Merges retrieved context with anti-hallucination rules</li>
@@ -808,33 +808,28 @@
       <p>
         The Intent Classification Module is the cognitive core of RepoWise. It determines how each user query
         should be processed by identifying its semantic intent and routing it to the corresponding retrieval engine.
-        The classification mechanism follows a <strong>five-stage hierarchical logic</strong> that incrementally
-        filters, analyzes, or refines the query based on linguistic and semantic cues until an appropriate intent
-        label is assigned.
+        The classification mechanism uses a <strong>hybrid approach</strong>: keyword-based detection for out-of-scope
+        queries combined with <strong>LLM-based Few-Shot Chain of Thought (CoT) prompting</strong> for all other intents,
+        achieving <strong>97.6% accuracy</strong>.
       </p>
 
-      <div class="diagram-container">
-        <a href="./static/diagrams/IntentClassificationFlow1.png" target="_blank" title="Click to view full size">
-          <img src="./static/diagrams/IntentClassificationFlow1.png" alt="Intent Classification Flow" />
-        </a>
-        <p class="has-text-centered"><em>Figure 3: Five-stage intent classification pipeline (click to enlarge)</em></p>
-      </div>
-
       <div class="feature-box">
-        <h4 class="title is-5">Five-Stage Classification Pipeline</h4>
+        <h4 class="title is-5">Hybrid Classification Approach</h4>
         <ol>
-          <li><strong>Stage 0 - Out-of-Scope Detection:</strong> Screens out greetings and irrelevant inputs (confidence ~0.99)</li>
-          <li><strong>Stage 1 - Procedural Detection:</strong> Identifies process-oriented questions about documentation using phrases like "how do I," "who maintains" (confidence ~0.95)</li>
-          <li><strong>Stage 2 - Statistical Detection:</strong> Checks for numerical or activity-based queries like "Show top contributors" or "Which issues have most comments" (confidence ~0.90)</li>
-          <li><strong>Stage 3 - Keyword Scoring:</strong> Computes weighted frequencies for governance-related tokens. Queries with cumulative score ≥1.5 are classified as PROJECT_DOC (confidence 0.50-0.95)</li>
-          <li><strong>Stage 4 - Heuristic Fallback:</strong> Captures edge cases through syntactic and semantic heuristics (confidence 0.40-0.65)</li>
+          <li><strong>Keyword-Based OUT_OF_SCOPE Detection:</strong> Fast pattern matching identifies greetings, casual conversation, and off-topic queries without LLM overhead</li>
+          <li><strong>LLM Few-Shot CoT Classification:</strong> For non-trivial queries, the system uses few-shot examples with chain-of-thought reasoning to classify intent. The LLM analyzes the query, considers similar examples, and provides structured reasoning before outputting the final classification</li>
         </ol>
       </div>
 
       <div class="feature-box">
         <h4 class="title is-5">Query Classification Categories</h4>
         <ul>
-          <li><strong>PROJECT_DOC:</strong> Governance, contribution guidelines, project policies → routed to RAG Pipeline
+          <li><strong>OUT_OF_SCOPE:</strong> Greetings, casual conversation, unrelated queries → Direct response without LLM
+            <ul>
+              <li>Example: "Hello", "How are you?"</li>
+            </ul>
+          </li>
+          <li><strong>PROJECT_DOC_BASED:</strong> Governance, contribution guidelines, project policies → routed to RAG Pipeline
             <ul>
               <li>Example: "Who maintains this project?"</li>
               <li>Example: "What are the contribution guidelines?"</li>
@@ -852,6 +847,11 @@
               <li>Example: "What are the most commented issues?"</li>
             </ul>
           </li>
+          <li><strong>GENERAL:</strong> Generic programming questions not project-specific → General knowledge response
+            <ul>
+              <li>Example: "What is a pull request?"</li>
+            </ul>
+          </li>
         </ul>
       </div>
     </div>
@@ -865,7 +865,7 @@
     <div class="content">
       <p>
         Each query is transformed into a task-specific prompt composed of five modular components. RepoWise currently
-        defines eight intent-driven templates that balance factual grounding, task specialization, and evidence transparency.
+        defines six intent-driven templates that balance factual grounding, task specialization, and evidence transparency.
       </p>
 
       <h3 class="title is-4">Template Routing</h3>
@@ -901,11 +901,6 @@
             <tr>
               <td><code>PROJECT_DOC_BASED</code> (WHAT)</td>
               <td>WHAT</td>
-              <td class="has-text-right">&sim;2000</td>
-            </tr>
-            <tr>
-              <td><code>PROJECT_DOC_BASED</code> (LIST)</td>
-              <td>LIST</td>
               <td class="has-text-right">&sim;2000</td>
             </tr>
             <tr>
@@ -1010,7 +1005,7 @@
       <p><strong>Principle:</strong> Pattern-based entity extraction prevents hallucination of maintainer identities. Explicit role distinction clarifies governance structure.</p>
 
       <h5 class="title is-6">HOW Template (&sim;1200 tokens)</h5>
-      <pre><code>TASK: PROCEDURAL EXTRACTION - Extract step-by-step instructions
+      <pre><code>TASK: PROCESS EXPLANATION - Extract step-by-step instructions
 
 1. Extract the exact procedure/steps from the documents.
 2. Present steps in sequential order (numbered or bulleted).
@@ -1032,7 +1027,7 @@
       <p><strong>Principle:</strong> Sequential ordering with explicit requirement levels (MUST/MAY/IF) preserves procedural fidelity and acknowledges incomplete documentation.</p>
 
       <h5 class="title is-6">WHAT Template (&sim;1000 tokens)</h5>
-      <pre><code>TASK: INFORMATION EXTRACTION - Extract specific information
+      <pre><code>TASK: DEFINITION - Define and explain concepts
 
 1. Extract the exact information requested from documents.
 2. Quote directly from documents when possible.
@@ -1056,31 +1051,8 @@
    - Cite the authoritative document</code></pre>
       <p><strong>Principle:</strong> Direct quotation and multi-source acknowledgment preserve information accuracy and handle ambiguity transparently.</p>
 
-      <h5 class="title is-6">LIST Template (&sim;1100 tokens)</h5>
-      <pre><code>TASK: LIST EXTRACTION - Extract and format lists
-
-1. Extract ALL items that match the question.
-2. Format as bulleted or numbered list (preserve original format if specified).
-3. Include descriptions or explanations if provided in documents.
-4. Group related items if the document groups them.
-5. Preserve hierarchical structure if present (main items, sub-items, detailed points).
-6. Preserve order if specified in documents (e.g., "priority order", "sequence").
-
-7. DO NOT add items not explicitly in documents.
-8. DO NOT reorganize items unless necessary for clarity.
-
-9. If list is incomplete, state: "Partial list provided. Complete list may not be documented."
-
-10. If no list found, state: "Based on the available project documents, I cannot find a list of [topic]. The following documents were searched: [list documents]."
-
-11. For each item, include:
-    - The item name/title
-    - Brief description (if provided)
-    - Requirements or conditions (if applicable)</code></pre>
-      <p><strong>Principle:</strong> Structure preservation with explicit incompleteness handling maintains list fidelity and avoids arbitrary reordering.</p>
-
       <h5 class="title is-6">COMMITS Template (&sim;800 tokens)</h5>
-      <pre><code>TASK: COMMIT DATA ANALYSIS - Analyze commit and contributor data
+      <pre><code>TASK: ANALYZE COMMIT DATA - Analyze commit and contributor data
 
 1. Analyze the CSV data provided below.
 2. Answer questions based on commit statistics.
@@ -1121,7 +1093,7 @@
       <p><strong>Principle:</strong> CSV-based retrieval enables direct aggregation, sorting, and ranking operations that are computationally inefficient with semantic search. Structured data maintains precise numerical relationships without semantic approximation.</p>
 
       <h5 class="title is-6">ISSUES Template (&sim;800 tokens)</h5>
-      <pre><code>TASK: ISSUE DATA ANALYSIS - Analyze issue and discussion data
+      <pre><code>TASK: ANALYZE ISSUES DATA - Analyze issue and discussion data
 
 1. Analyze the CSV data provided below.
 2. Answer questions based on issue statistics.
@@ -1181,7 +1153,7 @@
       </ol>
 
       <h5 class="title is-6">GENERAL Template (&sim;500 tokens)</h5>
-      <pre><code>TASK: PROVIDE GENERAL GUIDANCE - Help with general programming questions
+      <pre><code>TASK: GENERAL INFORMATION RETRIEVAL - Help with general programming questions
 
 1. Provide helpful, accurate information based on software engineering best practices.
 2. Reference widely-accepted standards when applicable.
@@ -1305,7 +1277,7 @@ Your answer:</code></pre>
       <ul>
         <li><strong>Modularity:</strong> Universal components (System Role, Anti-Hallucination, User Question) pair with task-specific instructions and context to enable rapid template extension.</li>
         <li><strong>Factual Grounding:</strong> Extensive anti-hallucination guidance (&sim;37.5% of total prompt) prioritizes accuracy over fluency.</li>
-        <li><strong>Task Specialization:</strong> Distinct WHO/HOW/WHAT/LIST instructions optimize extraction for entities, procedures, facts, and lists.</li>
+        <li><strong>Task Specialization:</strong> Distinct WHO/HOW/WHAT instructions optimize extraction for entities, procedures, and facts.</li>
         <li><strong>Structured vs. Semantic Retrieval:</strong> CSV format for COMMITS/ISSUES enables SQL-like aggregation, sorting, and filtering that semantic search cannot perform efficiently.</li>
         <li><strong>Evidence Transparency:</strong> Mandatory source attribution supports independent verification and reproducible analysis.</li>
       </ul>
@@ -1320,8 +1292,8 @@ Your answer:</code></pre>
     <div class="columns is-multiline">
       <div class="column is-half">
         <div class="feature-box">
-          <h4 class="title is-5">🤖 Five-Stage Intent Classification</h4>
-          <p>Hierarchical pipeline achieving 86.4% accuracy in routing queries to appropriate retrieval engines</p>
+          <h4 class="title is-5">🤖 LLM-Based Intent Classification</h4>
+          <p>Few-Shot Chain of Thought (CoT) classification achieving 97.6% accuracy in routing queries to appropriate retrieval engines</p>
         </div>
       </div>
 
@@ -1499,7 +1471,7 @@ npm run dev</code></pre>
       <div class="feature-box">
         <h4 class="title is-5">Key Research Contributions</h4>
         <ul>
-          <li>Five-stage intent classification pipeline with 86.4% accuracy</li>
+          <li>LLM-based Few-Shot Chain of Thought (CoT) intent classification with 97.6% accuracy</li>
           <li>Dual retrieval architecture combining semantic RAG and structured CSV data</li>
           <li>Evidence-grounded reasoning with anti-hallucination mechanisms</li>
           <li>Local LLM inference for privacy-preserving, reproducible analysis</li>
