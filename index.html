@@ -868,60 +868,6 @@
         defines six intent-driven templates that balance factual grounding, task specialization, and evidence transparency.
       </p>
 
-      <h3 class="title is-4">Template Routing</h3>
-      <p class="has-text-justified">
-        Intent classification determines which prompt template is assembled. Out-of-scope requests are handled directly,
-        while documentation, statistical, and general inquiries leverage structured or semantic retrieval pipelines.
-      </p>
-      <div class="table-container">
-        <table class="table is-fullwidth is-striped is-hoverable">
-          <thead>
-            <tr>
-              <th>Intent</th>
-              <th>Template</th>
-              <th class="has-text-right">Tokens</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>OUT_OF_SCOPE</code></td>
-              <td>Direct response (no LLM)</td>
-              <td class="has-text-right">0</td>
-            </tr>
-            <tr>
-              <td><code>PROJECT_DOC_BASED</code> (WHO)</td>
-              <td>WHO</td>
-              <td class="has-text-right">&sim;2000</td>
-            </tr>
-            <tr>
-              <td><code>PROJECT_DOC_BASED</code> (HOW)</td>
-              <td>HOW</td>
-              <td class="has-text-right">&sim;2000</td>
-            </tr>
-            <tr>
-              <td><code>PROJECT_DOC_BASED</code> (WHAT)</td>
-              <td>WHAT</td>
-              <td class="has-text-right">&sim;2000</td>
-            </tr>
-            <tr>
-              <td><code>COMMITS</code></td>
-              <td>COMMITS</td>
-              <td class="has-text-right">&sim;1000</td>
-            </tr>
-            <tr>
-              <td><code>ISSUES</code></td>
-              <td>ISSUES</td>
-              <td class="has-text-right">&sim;1000</td>
-            </tr>
-            <tr>
-              <td><code>GENERAL</code></td>
-              <td>GENERAL</td>
-              <td class="has-text-right">&sim;900</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
       <h3 class="title is-4">Component Structure</h3>
       <p class="has-text-justified">
         Every template combines universal guardrails with task-specific context. The table below summarizes how each
