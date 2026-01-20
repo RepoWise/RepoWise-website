@@ -204,95 +204,350 @@ backend/
 
 ### 4.2 Core Backend Modules
 
-#### 4.2.1 Intent Classification Pipeline
+#### 4.2.1 Intent Classification
 
-**File:** `backend/app/models/intent_router.py` (541 lines)
+**File:** `backend/app/models/intent_router.py` (853 lines)
 
-**5-Stage Classification:**
+**Method:** Few-Shot Chain of Thought (CoT) Prompting with hybrid OUT_OF_SCOPE detection
 
-1. **Stage 0: OUT_OF_SCOPE Detection** (Lines 255-290)
-   - **Confidence:** 0.99
-   - **Patterns:** "hello", "hi", "who are you", "what can you do"
-   - **Example:** "Hello!" → OUT_OF_SCOPE
-
-2. **Stage 1: Procedural Detection** (Lines 301-306)
-   - **Confidence:** 0.95
-   - **Patterns:** "how do i", "how can i", "who maintains"
-   - **Example:** "How do I contribute?" → PROJECT_DOC_BASED
-
-3. **Stage 2: Statistical Detection** (Lines 309-323)
-   - **Confidence:** 0.90
-   - **Patterns:** "show", "list", "how many", "which"
-   - **Example:** "Show top 5 contributors" → COMMITS
-
-4. **Stage 3: Keyword Scoring** (Lines 328-369)
-   - **Confidence:** 0.50-0.95
-   - **Logic:** Weighted keyword frequencies (score ≥ 1.5 triggers classification)
-   - **Example:** "Who are the maintainers?" → PROJECT_DOC_BASED
-
-5. **Stage 4: Heuristic Fallback** (Lines 374-399)
-   - **Confidence:** 0.40-0.70
-   - **Logic:** If project context exists and query is generic → PROJECT_DOC_BASED
-
-**Accuracy:** 86.4% overall
+**How It Works:**
+1. **Keyword-based OUT_OF_SCOPE detection** (fast, no LLM) - Catches greetings and off-topic queries
+2. **LLM-based CoT classification** - For all other queries, the LLM reasons step-by-step using 24 few-shot examples
 
 **Intent Types:**
-- `OUT_OF_SCOPE`: Greetings, meta-questions
-- `PROJECT_DOC_BASED`: Governance, policies, processes
-- `COMMITS`: Commit history, contributors
-- `ISSUES`: Bug tracking, community engagement
-- `GENERAL`: Programming questions
+
+| Intent | Routing | Examples |
+|--------|---------|----------|
+| `OUT_OF_SCOPE` | Direct response (no LLM) | "Hello", "Who are you?" |
+| `PROJECT_DOC_BASED` | RAG (ChromaDB) | "Who maintains?", "How to contribute?" |
+| `COMMITS` | CSV Engine (pandas) | "Top contributors", "Latest commits" |
+| `ISSUES` | CSV Engine (pandas) | "Open vs closed issues", "Most commented" |
+| `GENERAL` | LLM knowledge | "What is Git?", "Explain recursion" |
+
+**Accuracy:** 97.6% (CoT method) vs 78% (keyword-only method)
 
 ---
 
 #### 4.2.2 LLM Client & Prompt Engineering
 
-**File:** `backend/app/models/llm_client.py` (691 lines)
+**File:** `backend/app/models/llm_client.py` (635 lines)
 
 **Connection Pooling:**
 ```python
-# Lines 45-62
+# Lines 36-56
 max_async_connections: 20
 max_sync_connections: 10
-timeout: 300 seconds
+keepalive_expiry: 30 seconds
+timeout: 120 seconds
 ```
 
 **Prompt Template System:**
 
-| Template | Intent | Tokens | Purpose |
-|----------|--------|--------|---------|
-| WHO | PROJECT_DOC | 3800 | Extract maintainers/roles |
-| HOW | PROJECT_DOC | 4200 | Explain processes |
-| WHAT | PROJECT_DOC | 3900 | Describe policies |
-| LIST | PROJECT_DOC | 3700 | Enumerate items |
-| COMMITS | COMMITS | 4100 | Analyze commit history |
-| ISSUES | ISSUES | 4000 | Analyze issue tracking |
-| GENERAL | GENERAL | 3600 | Answer programming Qs |
-| MULTI_SOURCE | Complex | 4500 | Combine sources |
+| Template | Intent | Purpose |
+|----------|--------|---------|
+| WHO | PROJECT_DOC_BASED | Extract maintainers, emails, GitHub usernames, roles |
+| HOW | PROJECT_DOC_BASED | Explain step-by-step procedures |
+| WHAT | PROJECT_DOC_BASED | Define and explain concepts |
+| COMMITS | COMMITS | Analyze commit history and contributors |
+| ISSUES | ISSUES | Analyze issue tracking and reporters |
+| GENERAL | GENERAL | Answer general information queries |
 
-**Anti-Hallucination Rules (Lines 280-363):**
-- ONLY use information from provided documents
-- NEVER infer or add external knowledge
-- ALWAYS cite sources explicitly
-- If information is missing, state clearly
-- No speculation ("probably", "likely", "might be")
+**Note:** The LIST template mentioned in early designs is NOT implemented. LIST queries route to the default GENERAL template.
 
-**Example Prompt Structure:**
+---
+
+### Prompt Component Structure
+
+Each prompt is assembled from 5 components:
+
 ```
-System Role: You are a helpful assistant analyzing open source project governance.
+┌─────────────────────────────────────────────────────┐
+│ Component 1: System Role (~50 tokens)               │
+├─────────────────────────────────────────────────────┤
+│ Component 2: Task Instructions (500-1200 tokens)    │
+├─────────────────────────────────────────────────────┤
+│ Component 3: Anti-Hallucination Rules (~500 tokens) │
+├─────────────────────────────────────────────────────┤
+│ Component 4: Retrieved Context (500-4000 tokens)    │
+├─────────────────────────────────────────────────────┤
+│ Component 5: User Question (~50-200 tokens)         │
+└─────────────────────────────────────────────────────┘
+```
 
-Task Instructions:
-[Template-specific instructions for WHO/HOW/WHAT/etc.]
+---
 
-Anti-Hallucination Rules:
-[37.5% of prompt - critical for accuracy]
+### Component 1: System Role
 
-Retrieved Documents:
-[5-10 chunks from ChromaDB or CSV data]
+**For PROJECT_DOC_BASED (who/how/what/general):**
+```
+You are a precise document analyst for the {project_name} project.
+```
 
-User Question: [Original query]
+**For COMMITS/ISSUES:**
+```
+You are analyzing {query_type} data for the {project_name} repository.
+```
 
-Your Response:
+---
+
+### Component 2: Task Instructions
+
+#### WHO Template
+```
+TASK: ENTITY EXTRACTION - Extract names, emails, GitHub usernames, and roles
+
+CRITICAL INSTRUCTIONS:
+1. Search the documents below for actual names, email addresses, and GitHub usernames
+2. Look for these patterns:
+   - Email format: "Name <email@domain>" or "M: Name <email>"
+   - GitHub format: "@username" (e.g., @fchollet, @MarkDaoust)
+   - CODEOWNERS format: "/path/ @username1 @username2"
+   - Plain names: "Maintained by: John Doe"
+3. ONLY extract names/usernames that actually appear in the documents
+4. When you find GitHub usernames (starting with @), extract them as maintainers
+5. If NO names/emails/usernames are found, you MUST respond: "No maintainer information found in the available documents"
+6. IGNORE any format descriptions or template explanations
+7. DO NOT invent or guess names - only extract what you can see
+
+RESPONSE LENGTH: Provide a complete answer. List all entities found with their roles/context from the document.
+
+EXAMPLE EXTRACTION:
+Input: "/guides/ @fchollet @MarkDaoust @pcoet"
+Output: "The maintainers for the /guides/ directory are @fchollet, @MarkDaoust, and @pcoet (GitHub usernames from CODEOWNERS)."
+```
+
+#### HOW Template
+```
+TASK: PROCESS EXPLANATION - Explain step-by-step procedures
+
+INSTRUCTIONS:
+- Provide a comprehensive explanation of the process
+- Break down into clear, numbered steps if the procedure has multiple stages
+- Include any prerequisites, requirements, or important context
+- Mention specific tools, commands, or guidelines referenced in the documents
+- Add relevant details that help the user understand the complete process
+- Cite which documents contain each piece of information
+
+RESPONSE LENGTH: Match the complexity of the question. Simple processes can be 2-3 sentences, complex workflows need detailed step-by-step breakdowns.
+```
+
+#### WHAT Template
+```
+TASK: DEFINITION - Explain what something is
+
+INSTRUCTIONS:
+- Start with a clear, direct definition
+- Provide comprehensive project-specific context from the documents
+- Include relevant examples, use cases, or implementation details
+- Explain the purpose, scope, or importance if mentioned in the documents
+- Add any related information that provides complete understanding
+
+RESPONSE LENGTH: Provide enough detail for full understanding. Include all relevant context from the documents.
+```
+
+#### COMMITS Template
+```
+TASK: ANALYZE COMMIT DATA - Answer questions about repository commits
+
+CRITICAL INSTRUCTIONS:
+1. Answer ONLY using the commit data shown below
+2. DO NOT make up or invent information
+3. Include specific details (commit SHAs, author names, dates, files, messages)
+4. Provide comprehensive, well-formatted answers with all relevant data points
+5. For statistical questions, include numbers, percentages, and context
+6. For list questions, provide the COMPLETE requested list with supporting details
+7. If the data doesn't answer the question, say "The commit data doesn't contain this information"
+
+FORMATTING REQUIREMENTS:
+- For "top N" queries: Provide exactly N items in numbered list format
+- For "latest" queries: Show full commit details including SHA, author, date, message
+- For trend questions: Analyze the data, provide numbers, and draw conclusions
+- For file queries: Count/list files with context about changes
+- For author queries: Include commit counts and provide GitHub usernames/emails
+
+RESPONSE STRUCTURE FOR DIFFERENT QUERY TYPES:
+→ "Who are top contributors?" → "Based on the provided commits data, the top 5 contributors by commit count are:\n\n1. John Smith with 45 commits\n2. Jane Doe with 32 commits..."
+→ "Latest commits?" → "Based on the provided commits data, the 3 latest commits are:\n\n1. SHA: abc123...\n   Author: John Smith (john@example.com)\n   Date: 2026-01-15\n   Message: Fix bug in authentication..."
+
+CRITICAL: Always count the actual number of items in the data and use the EXACT count in your response.
+
+RESPONSE LENGTH: Provide complete, well-structured answers with ALL requested items and details. Do not truncate lists.
+```
+
+#### ISSUES Template
+```
+TASK: ANALYZE ISSUES DATA - Answer questions about repository issues
+
+CRITICAL INSTRUCTIONS:
+1. Answer ONLY using the issues data shown below
+2. DO NOT make up or invent information
+3. Include specific details (issue numbers, titles, users, states, dates, comment counts)
+4. Provide comprehensive, well-formatted answers with all relevant data points
+5. For statistical questions, include numbers, percentages, and trends
+6. For list questions, provide the COMPLETE requested list with supporting details
+7. If the data doesn't answer the question, say "The issues data doesn't contain this information"
+
+FORMATTING REQUIREMENTS:
+- For "top N" queries: Provide exactly N issues in numbered list format with full details
+- For "most recent" queries: Sort by date and provide complete issue information
+- For "longest open" queries: Calculate duration and list oldest issues with creation dates
+- For pattern/theme questions: Analyze all visible data and identify recurring topics
+- For status queries: Provide counts and percentages (e.g., "62 open (10.7%), 580 closed (89.3%)")
+- For reporter queries: List unique contributors with their issue counts
+
+RESPONSE STRUCTURE FOR DIFFERENT QUERY TYPES:
+→ "Highest comment count?" → "Based on the provided issues data, the top 5 issues with the highest comment counts are:\n\n1. Issue #234: Add support for Python 3.12\n   Comments: 47 | State: open | Created: 2025-12-15..."
+→ "Most active reporters?" → "The most active issue reporters are:\n\n1. john_smith: 23 issues reported\n2. jane_doe: 18 issues reported..."
+
+CRITICAL: Always count the actual number of items in the data and use the EXACT count in your response.
+
+RESPONSE LENGTH: Provide complete, well-structured answers with ALL requested items and full details. Do not truncate lists or omit information.
+```
+
+#### GENERAL Template
+```
+TASK: GENERAL INFORMATION RETRIEVAL
+
+INSTRUCTIONS:
+- Provide comprehensive, well-structured answers
+- Cite document names when referencing information
+- Use bullet points or numbered lists for multi-part answers
+- Include all relevant context and details from the documents
+- Balance brevity with completeness - don't omit important information
+
+RESPONSE LENGTH: Match the question's complexity. Provide enough detail for complete understanding.
+```
+
+---
+
+### Component 3: Anti-Hallucination Rules
+
+#### For COMMITS Data
+```
+⚠️ CRITICAL ANTI-HALLUCINATION RULES ⚠️
+1. You MUST answer ONLY using the commits data below
+2. DO NOT use external knowledge, training data, or previous conversations
+3. If information is missing, you MUST say: "The commits data doesn't contain this information"
+4. Be factual and precise
+5. Include specific details from the data (SHAs, names, dates, numbers)
+6. NEVER invent commit SHAs or author names
+7. If asked for "top contributors" and you see names with counts, LIST ALL OF THEM with counts
+8. If asked for "N items", provide EXACTLY N items, no more, no less
+9. If asked about "files" and you see filenames, COUNT or LIST THEM ALL
+10. Include ALL available details: full SHAs (not truncated), complete emails, exact dates, commit messages
+11. Do not be overly conservative - if data is clearly visible in the CSV, extract and present it
+12. Use structured formatting (numbered lists, bullet points) for readability
+```
+
+#### For ISSUES Data
+```
+⚠️ CRITICAL ANTI-HALLUCINATION RULES ⚠️
+1. You MUST answer ONLY using the issues data below
+2. DO NOT use external knowledge, training data, or previous conversations
+3. If information is missing, you MUST say: "The issues data doesn't contain this information"
+4. Be factual and precise
+5. Include specific details from the data (SHAs, names, dates, numbers)
+6. NEVER invent issue numbers (like #1234, #5678)
+7. NEVER invent usernames (like "JohnDoe", "JaneDoe", "BobSmith")
+8. NEVER invent locations or states (like "CA", "NY", "TX")
+9. If asked for "updated" issues but data only has "created" dates, say: "The data shows recently created issues, not recently updated"
+10. Only use issue numbers, titles, and usernames that appear verbatim in the data below
+11. If asked for "N items", provide EXACTLY N items, no more, no less
+12. Include ALL available details: issue numbers, complete titles, reporter usernames, states, dates, comment counts
+13. For analysis questions, examine ALL visible issues and provide comprehensive insights
+14. Use structured formatting (numbered lists, bullet points, tables) for readability
+```
+
+#### For PROJECT_DOC_BASED (Governance Documents)
+```
+CRITICAL INSTRUCTIONS:
+
+RULE 1: INFORMATION SOURCE
+- Your ONLY source of information is the project documents provided below
+- These documents include README, CONTRIBUTING, governance files, and other project documentation
+- Answer questions about ANY aspect of the project if it appears in the documents
+- DO NOT use external knowledge, training data, or general information beyond what's in the documents
+- DO NOT make logical inferences beyond what is explicitly stated
+- DO NOT fill in "reasonable" assumptions or common practices
+
+RULE 2: HANDLING MISSING INFORMATION
+If information is NOT in the documents, respond EXACTLY like this:
+"The available project documents for {project_name} do not contain information about [topic]. I cannot answer this question based on the provided documents."
+
+DO NOT:
+❌ Provide general knowledge answers (e.g., "typically", "usually", "commonly")
+❌ Make up specific details (numbers, percentages, thresholds, names, policies)
+❌ Give partial answers then admit uncertainty afterward
+❌ Hedge with phrases like "based on general practices" or "it's likely that"
+
+RULE 3: VERIFICATION PROCESS
+Before stating ANY fact:
+1. Locate the exact text in the documents below
+2. Verify it's explicitly stated, not inferred
+3. Note which document it comes from
+4. Only then include it in your answer
+
+RULE 4: ANSWER FORMAT
+✅ GOOD: "According to GOVERNANCE.md, maintainers are elected by consensus vote."
+❌ BAD: "Maintainers are typically elected by a majority vote, though this isn't explicitly stated."
+
+RULE 5: NAMES, NUMBERS, AND SPECIFICS
+- Only mention names, emails, numbers, or percentages that appear verbatim in the documents
+- If you cannot find a specific piece of information, say so explicitly
+- Never invent examples or provide "typical" values
+
+RULE 6: OUTPUT FORMAT - CRITICAL
+DO NOT EXPOSE YOUR REASONING PROCESS TO THE USER.
+- DO NOT write: "Here's a step-by-step guide...", "First, let me verify...", "Based on my analysis..."
+- DO NOT explain: "I checked the documents...", "I found this in...", "Note that I followed..."
+- DO NOT mention: "CRITICAL", "ANTI-HALLUCINATION", "PROTOCOL", "rules", or "guidelines I'm following"
+
+CORRECT OUTPUT: Direct answer with source citation and adequate detail
+Example: "You can contribute by submitting a PR adding examples to examples/vision/script_name.py (README.md)."
+
+RULE 7: RESPONSE COMPLETENESS
+- Provide COMPLETE answers with all relevant details from the documents
+- Include supporting information like titles, dates, counts, names, or descriptions when available
+- For list queries (e.g., "top 5 issues"), provide ALL requested items with details
+- Balance brevity with informativeness - don't be overly terse
+```
+
+---
+
+### Component 4: Retrieved Context
+
+**For PROJECT_DOC_BASED:**
+```
+═══════════════════════════════════════════
+
+AVAILABLE GOVERNANCE DOCUMENTS FOR {project_name}:
+{context}
+
+═══════════════════════════════════════════
+
+FINAL REMINDER:
+- Extract ONLY what is explicitly written above
+- Cite document names when providing information (use format: "answer text (DOCUMENT_NAME)")
+- If uncertain or information is missing, clearly state that
+- DO NOT explain your reasoning process - just provide the answer
+```
+
+**For COMMITS/ISSUES:**
+```
+{DATA_TYPE} DATA FOR {project_name}:
+{context}
+
+REMINDER: Only use information from the {data_type} data above. Do not use external knowledge or invent data.
+```
+
+---
+
+### Component 5: User Question
+
+```
+USER QUESTION: {query}
+
+Your answer:
 ```
 
 ---
@@ -566,38 +821,36 @@ export const api = {
 
 ## 6. INTENT CLASSIFICATION SYSTEM
 
-### 6.1 Architecture Overview
+### 6.1 Method: Few-Shot Chain of Thought (CoT) Prompting
+
+RepoWise uses **LLM-based intent classification** with 24 few-shot examples that guide the model to reason step-by-step before classifying.
 
 ```
-User Query: "Who are the maintainers?"
+User Query: "Who are the core developers?"
      ↓
-Stage 0: OUT_OF_SCOPE? ✗
+Hybrid Detection: OUT_OF_SCOPE? ✗ (keyword check)
      ↓
-Stage 1: Procedural? ✓ ("who maintains")
+LLM CoT Reasoning:
+  "Core developers" typically means the most active contributors
+  by code contribution. This is determined by commit statistics,
+  not governance documents which list maintainers.
      ↓
-Classification: PROJECT_DOC_BASED (confidence: 0.95)
+Classification: COMMITS
 ```
 
-### 6.2 Intent Types
+### 6.2 Intent Routing
 
-| Intent | Routing | Examples |
-|--------|---------|----------|
-| **OUT_OF_SCOPE** | Polite redirect | "Hello", "Who are you?" |
-| **PROJECT_DOC_BASED** | RAG (ChromaDB) | "Who maintains?", "How to contribute?" |
-| **COMMITS** | CSV engine | "Top contributors", "Latest commits" |
-| **ISSUES** | CSV engine | "Open vs closed issues", "Most commented" |
+| Intent | Data Source | Examples |
+|--------|-------------|----------|
+| **OUT_OF_SCOPE** | Direct response | "Hello", "Who are you?" |
+| **PROJECT_DOC_BASED** | ChromaDB (vector search) | "Who maintains?", "How to contribute?" |
+| **COMMITS** | CSV Engine (pandas) | "Top contributors", "Core developers" |
+| **ISSUES** | CSV Engine (pandas) | "Most commented issues", "Issue reporters" |
 | **GENERAL** | LLM knowledge | "What is Git?", "Explain recursion" |
 
-### 6.3 Accuracy Metrics
+### 6.3 Accuracy
 
-| Intent | Accuracy |
-|--------|----------|
-| OUT_OF_SCOPE | 99.1% |
-| PROJECT_DOC_BASED | 91.3% |
-| COMMITS | 88.2% |
-| ISSUES | 85.7% |
-| GENERAL | 78.4% |
-| **Overall** | **86.4%** |
+**Overall: 97.6%** (Few-Shot CoT method on 250 test queries)
 
 ---
 
