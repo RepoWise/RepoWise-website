@@ -792,7 +792,7 @@
           <li><strong>RAG Pipeline:</strong> Semantic search over project documentation using all-MiniLM-L6-v2 embeddings and ChromaDB</li>
           <li><strong>CSV Data Pipeline:</strong> Structured retrieval of commit and issue metadata via GitHub API</li>
           <li><strong>Prompt Assembly Engine:</strong> Merges retrieved context with anti-hallucination rules</li>
-          <li><strong>LLM Generation Module:</strong> Local Mistral 7B via Ollama for privacy-preserving reasoning</li>
+          <li><strong>LLM Generation Module:</strong> Model-agnostic local inference via Ollama (default: Mistral 7B, configurable to any compatible model)</li>
           <li><strong>Persistent Storage Layer:</strong> ChromaDB vector store, CSV cache, and file cache for reproducibility</li>
         </ol>
       </div>
@@ -1022,20 +1022,27 @@
    - Trends
 
 7. If data is unavailable, state: "Commit data is not available for this project."</code></pre>
-      <p><strong>Example Context (CSV format):</strong></p>
-      <pre><code>COMMIT DATA FOR vercel-swr:
+      <p><strong>Data Schema (from code):</strong></p>
+      <pre><code>COMMITS DATA SCHEMA - ALL COLUMNS:
+| Column        | Type     | Description                          |
+|---------------|----------|--------------------------------------|
+| commit_sha    | string   | Unique commit identifier             |
+| name          | string   | Contributor name                     |
+| email         | string   | Contributor email                    |
+| date          | datetime | Commit timestamp                     |
+| filename      | string   | File path modified                   |
+| lines_added   | int      | Lines added in this file             |
+| lines_deleted | int      | Lines deleted in this file           |
 
-| commit_id | author | author_email   | date            | message                | files_changed | additions | deletions |
-|-----------|--------|----------------|-----------------|------------------------|---------------|-----------|-----------|
-| abc123... | john   | j@example.com  | 2025-01-15 14:30 | Fix bug in parser      | 3             | 45        | 12        |
-| def456... | jane   | jane@ex.com    | 2025-01-14 09:15 | Add new feature        | 7             | 234       | 18        |
-| ghi789... | john   | j@example.com  | 2025-01-13 11:20 | Update docs            | 1             | 8         | 2         |</code></pre>
-      <p><strong>Example Query:</strong> “Who are the top contributors?”</p>
-      <p><strong>Expected Response:</strong></p>
-      <pre><code>Top contributors for vercel-swr based on commit count:
-
-1. john (j@example.com) - 2 commits, 53 additions, 14 deletions
-2. jane (jane@ex.com) - 1 commit, 234 additions, 18 deletions</code></pre>
+CRITICAL: One row per file modified, not per commit.
+To count commits: df.drop_duplicates(subset=['commit_sha'])</code></pre>
+      <p><strong>Example Query:</strong> "Who are the top 5 contributors?"</p>
+      <p><strong>Generated Pandas Code:</strong></p>
+      <pre><code>result = df.drop_duplicates(subset=['commit_sha'])
+          .groupby('name').size()
+          .sort_values(ascending=False)
+          .head(5)
+          .reset_index(name='commit_count')</code></pre>
       <p><strong>Principle:</strong> CSV-based retrieval enables direct aggregation, sorting, and ranking operations that are computationally inefficient with semantic search. Structured data maintains precise numerical relationships without semantic approximation.</p>
 
       <h5 class="title is-6">ISSUES Template (&sim;800 tokens)</h5>
@@ -1064,29 +1071,29 @@
    - Trends
 
 7. If data is unavailable, state: "Issue data is not available for this project."</code></pre>
-      <p><strong>Example Context (CSV format):</strong></p>
-      <pre><code>ISSUE DATA FOR vercel-swr:
+      <p><strong>Data Schema (from code):</strong></p>
+      <pre><code>ISSUES DATA SCHEMA - ALL COLUMNS:
+| Column       | Type     | Description                              |
+|--------------|----------|------------------------------------------|
+| type         | string   | 'issue' or 'comment' - FILTER BY THIS    |
+| issue_num    | int      | Issue number (e.g., 123 for #123)        |
+| title        | string   | Issue title (only for type='issue')      |
+| user_login   | string   | GitHub username of reporter              |
+| issue_state  | string   | 'OPEN' or 'CLOSED' (uppercase)           |
+| created_at   | datetime | When issue/comment was created           |
+| updated_at   | datetime | When issue/comment was last updated      |
+| body         | string   | Issue/comment content text               |
 
-| issue_id | title                        | author | comments | state  | labels             | created_at  | closed_at   |
-|----------|------------------------------|--------|----------|--------|--------------------|-------------|-------------|
-| #123     | Bug: Parser fails on edge    | user1  | 45       | open   | bug,high-priority  | 2025-01-10  | null        |
-| #124     | Feature: Add export func     | user2  | 32       | closed | enhancement        | 2025-01-08  | 2025-01-12  |
-| #125     | Question: Configure cache?   | user3  | 18       | open   | question           | 2025-01-09  | null        |</code></pre>
-      <p><strong>Example Query:</strong> “Which issues have the most comments?”</p>
-      <p><strong>Expected Response:</strong></p>
-      <pre><code>Most commented issues for vercel-swr:
-
-1. #123: "Bug: Parser fails on edge case" (45 comments, open)
-   Labels: bug, high-priority
-   Created: January 10, 2025
-
-2. #124: "Feature: Add export functionality" (32 comments, closed)
-   Labels: enhancement
-   Created: January 8, 2025 | Closed: January 12, 2025
-
-3. #125: "Question: How to configure cache?" (18 comments, open)
-   Labels: question
-   Created: January 9, 2025</code></pre>
+CRITICAL: Dataset has BOTH issues AND comments.
+To count issues: df[df['type'] == 'issue']
+Use 'user_login' for reporter names, NOT 'name'</code></pre>
+      <p><strong>Example Query:</strong> "Who are the most active issue reporters?"</p>
+      <p><strong>Generated Pandas Code:</strong></p>
+      <pre><code>result = df[df['type'] == 'issue']
+          .groupby('user_login').size()
+          .sort_values(ascending=False)
+          .head(10)
+          .reset_index(name='issues_reported')</code></pre>
       <p><strong>Principle:</strong> CSV format enables precise filtering, sorting, and aggregation across issue metadata. Structured tables preserve exact numeric values critical for ranking queries.</p>
 
       <h5 class="title is-6">Why CSV over RAG for COMMITS/ISSUES</h5>
@@ -1199,7 +1206,7 @@ Copyright (c) 2025 Vercel, Inc.
       <ol>
         <li>Query embedding (all-MiniLM-L6-v2, 384 dimensions)</li>
         <li>Vector similarity search (ChromaDB)</li>
-        <li>Hybrid reranking (semantic + keyword + recency)</li>
+        <li>Hybrid reranking (semantic similarity + document type boosting + keyword matching)</li>
         <li>Top-5 chunks assembled (&sim;3000 tokens)</li>
       </ol>
 
@@ -1267,7 +1274,14 @@ Your answer:</code></pre>
       <div class="column is-half">
         <div class="feature-box">
           <h4 class="title is-5">🔒 Privacy-Preserving Local LLM</h4>
-          <p>Mistral 7B running locally via Ollama ensures data privacy and reproducibility</p>
+          <p>Local inference via Ollama ensures data privacy and reproducibility without sending data to external APIs</p>
+        </div>
+      </div>
+
+      <div class="column is-half">
+        <div class="feature-box">
+          <h4 class="title is-5">🔄 Model-Agnostic Architecture</h4>
+          <p>Swap LLMs via environment variables—supports Mistral, Llama 3, Gemma, Phi-3, or any Ollama-compatible model for future flexibility</p>
         </div>
       </div>
 
@@ -1293,7 +1307,7 @@ Your answer:</code></pre>
             <li><strong>Framework:</strong> FastAPI (Python)</li>
             <li><strong>Vector Database:</strong> ChromaDB for document embeddings</li>
             <li><strong>Embeddings:</strong> all-MiniLM-L6-v2 (sentence-transformers)</li>
-            <li><strong>LLM:</strong> Mistral 7B via Ollama (local inference)</li>
+            <li><strong>LLM:</strong> Model-agnostic architecture (default: Mistral 7B via Ollama). Configurable via environment variables to support any Ollama-compatible model (e.g., Llama 3, Gemma, Phi-3)</li>
           </ul>
         </div>
 
@@ -1330,10 +1344,11 @@ pip install -r requirements.txt
 # Configure environment
 cp .env.example .env
 # Edit .env with your GitHub token and settings
+# Optional: Change OLLAMA_MODEL to use a different LLM (e.g., llama3, gemma, phi3)
 
 # Install Ollama (for local LLM)
 curl -fsSL https://ollama.com/install.sh | sh
-ollama pull mistral:7b
+ollama pull mistral:7b  # Or: ollama pull llama3, ollama pull gemma, etc.
 
 # Start the server
 ./start_dev.sh</code></pre>
@@ -1420,7 +1435,7 @@ npm run dev</code></pre>
           <li>LLM-based Few-Shot Chain of Thought (CoT) intent classification with 97.6% accuracy</li>
           <li>Dual retrieval architecture combining semantic RAG and structured CSV data</li>
           <li>Evidence-grounded reasoning with anti-hallucination mechanisms</li>
-          <li>Local LLM inference for privacy-preserving, reproducible analysis</li>
+          <li>Model-agnostic architecture enabling local LLM inference for privacy-preserving, reproducible analysis</li>
           <li>Conversational framework for governance and sustainability forensics</li>
         </ul>
       </div>
