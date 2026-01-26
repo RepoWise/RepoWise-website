@@ -858,6 +858,7 @@
   </div>
 </section>
 
+<!--
 <section class="section" id="prompt-templates">
   <div class="container is-max-desktop">
     <h2 class="title is-3 has-text-centered">Prompt Templates</h2>
@@ -1234,6 +1235,363 @@ Your answer:</code></pre>
         <li><strong>Structured vs. Semantic Retrieval:</strong> CSV format for COMMITS/ISSUES enables SQL-like aggregation, sorting, and filtering that semantic search cannot perform efficiently.</li>
         <li><strong>Evidence Transparency:</strong> Mandatory source attribution supports independent verification and reproducible analysis.</li>
       </ul>
+    </div>
+  </div>
+</section>
+-->
+<section class="section" id="prompt-templates">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Prompt Engineering Pipeline</h2>
+
+    <div class="content">
+      <p>
+        When a user submits a natural language query to RepoWise, the system transforms it through a carefully orchestrated
+        pipeline that ensures responses remain grounded in actual repository data while being tailored to the specific
+        information need. This appendix details the complete prompt engineering approach, explaining both the technical
+        implementation and the reasoning behind each design decision.
+      </p>
+
+      <h3 class="title is-4">Overview: From Query to Response</h3>
+      <p>
+        The prompt engineering pipeline in RepoWise operates in three stages: <em>intent classification</em>,
+        <em>context retrieval</em>, and <em>response generation</em>. Each stage employs specialized prompt templates designed
+        to address a fundamental challenge in conversational repository analysis: how to produce accurate, verifiable answers
+        without hallucinating information that does not exist in the project&rsquo;s artifacts.
+      </p>
+      <p>
+        We deliberately chose a multi-stage architecture over a single end-to-end prompt because different query types
+        require fundamentally different retrieval strategies. A question about contribution guidelines requires semantic
+        search over documentation, while a question about top contributors requires aggregation over structured commit data.
+        Attempting to handle both with a single retrieval mechanism would compromise accuracy for at least one query type.
+      </p>
+
+      <h3 class="title is-4">Stage 1: Intent Classification</h3>
+      <p>
+        The first stage determines which retrieval engine should handle the query by classifying it into one of five intent
+        categories: <code>PROJECT_DOC_BASED</code>, <code>COMMITS</code>, <code>ISSUES</code>, <code>GENERAL</code>, or
+        <code>OUT_OF_SCOPE</code>. This classification is critical because it routes the query to the appropriate data source
+        and prompt template.
+      </p>
+
+      <h4 class="title is-5">Few-Shot Chain-of-Thought Approach</h4>
+      <p>
+        Rather than relying on simple keyword matching or a fine-tuned classifier, RepoWise employs a Few-Shot
+        Chain-of-Thought (CoT) prompting strategy. We chose this approach because repository queries often contain semantically
+        ambiguous phrases that require reasoning to disambiguate. For example, &ldquo;Who are the core developers?&rdquo; and
+        &ldquo;Who maintains this project?&rdquo; appear similar but require different data sources: the former implies ranking
+        by commit activity (structured data), while the latter asks about documented governance roles (documentation).
+      </p>
+      <p>The classification prompt begins by establishing the task and defining each category with precise boundaries:</p>
+      <pre><code>You are an intent classifier for a GitHub repository Q&amp;A system.
+
+TASK: Classify the user query into exactly ONE category.
+Think step-by-step about what information is needed
+and where it would be found.
+
+CATEGORIES:
+- PROJECT_DOC_BASED: Questions about governance, contribution
+  guidelines, maintainers, licenses, policies, code of conduct
+- COMMITS: Questions about commit history, contributors by
+  code/commits, file modifications, development activity
+- ISSUES: Questions about bug reports, feature requests,
+  issue reporters, open/closed issues, issue statistics
+- GENERAL: Generic programming questions not specific to
+  this repository
+- OUT_OF_SCOPE: Greetings, off-topic queries, questions
+  about the assistant itself</code></pre>
+
+      <h4 class="title is-5">Exemplar Design for Disambiguation</h4>
+      <p>
+        The prompt includes 24 carefully selected exemplars that demonstrate the reasoning process. Each exemplar shows not
+        just the classification but <em>why</em> that classification is correct. We specifically chose exemplars that address
+        common sources of confusion:
+      </p>
+      <pre><code>Query: "Who are the top 5 contributors?"
+Reasoning: "Top contributors" implies ranking by measurable
+activity like commit count. This requires analyzing commit
+history data, not reading governance docs.
+Intent: COMMITS
+
+Query: "Who maintains this project?"
+Reasoning: "Maintainers" are explicitly defined roles documented
+in MAINTAINERS.md, CODEOWNERS, or governance docs. This is
+asking about documented roles, not commit statistics.
+Intent: PROJECT_DOC_BASED</code></pre>
+      <p>
+        This explicit reasoning serves two purposes: it guides the LLM to consider <em>where</em> the answer would be found
+        (not just what the question asks), and it creates a consistent decision boundary that the model can apply to novel
+        queries.
+      </p>
+
+      <h4 class="title is-5">Hybrid Architecture for Latency Optimization</h4>
+      <p>
+        While the CoT approach provides high accuracy, LLM inference introduces some latency. To optimize response time
+        without sacrificing accuracy, RepoWise employs a hybrid architecture where certain intents are detected through fast
+        keyword matching before invoking the LLM. Specifically, <code>OUT_OF_SCOPE</code> queries (greetings, off-topic
+        questions) are identified through pattern matching, reserving LLM classification for queries that genuinely require
+        semantic reasoning. This hybrid design maintains classification accuracy above 97% while reducing latency for
+        straightforward cases that do not require LLM inference.
+      </p>
+
+      <h3 class="title is-4">Stage 2: Context Retrieval</h3>
+      <p>
+        Once the intent is classified, the system retrieves relevant context using intent-specific strategies. The choice of
+        retrieval mechanism directly impacts answer quality, and different intent types demand fundamentally different
+        approaches.
+      </p>
+
+      <h4 class="title is-5">Semantic Search for Documentation Queries</h4>
+      <p>
+        For <code>PROJECT_DOC_BASED</code> queries, RepoWise performs hybrid semantic search over project documentation stored
+        in ChromaDB. Documents such as <code>README</code>, <code>CONTRIBUTING</code>, <code>GOVERNANCE</code>,
+        <code>CODE_OF_CONDUCT</code>, <code>SECURITY</code>, <code>LICENSE</code>, <code>MAINTAINERS</code>,
+        <code>CODEOWNERS</code>, and <code>OWNERS</code> are chunked, embedded using the <code>all-MiniLM-L6-v2</code> model,
+        and indexed for similarity search.
+      </p>
+      <p>
+        When a query arrives, it is embedded in the same vector space, and the system retrieves the top-5 most similar
+        chunks. These chunks are then re-ranked using a hybrid scoring function that combines semantic similarity with two
+        additional factors: (1) document type prioritization, which boosts governance-related documents
+        (<code>GOVERNANCE</code>, <code>MAINTAINERS</code>, <code>CODEOWNERS</code>) for queries about project roles, and
+        (2) content keyword matching, which boosts results containing query keywords. For &ldquo;who&rdquo; queries
+        specifically, the re-ranker also counts GitHub username patterns (@ symbols) to prioritize documents containing
+        contributor identities. We found that pure semantic similarity occasionally retrieved topically related but
+        factually irrelevant passages; the hybrid approach mitigates this by ensuring governance documents rank higher for
+        governance queries.
+      </p>
+
+      <h4 class="title is-5">Natural Language to Pandas for Structured Queries</h4>
+      <p>
+        For <code>COMMITS</code> and <code>ISSUES</code> queries, semantic search is fundamentally inappropriate. Questions
+        like &ldquo;Who are the top 5 contributors by commit count?&rdquo; require aggregation, sorting, and counting
+        operations that cannot be approximated through vector similarity.
+      </p>
+      <p>
+        Instead, RepoWise translates natural language queries into executable pandas code. This translation uses a
+        specialized prompt that includes the complete data schema and exact query-to-code mappings:
+      </p>
+      <pre><code>COMMITS DATA SCHEMA - ALL COLUMNS:
+| Column       | Type     | Description                          |
+|--------------|----------|--------------------------------------|
+| commit_sha   | string   | Unique commit identifier             |
+| name         | string   | Contributor name                     |
+| email        | string   | Contributor email                    |
+| date         | datetime | Commit timestamp                     |
+| filename     | string   | File path modified                   |
+| lines_added  | int      | Lines added in this file             |
+| lines_deleted| int      | Lines deleted in this file           |
+
+CRITICAL RULES FOR COMMITS:
+1. ONE ROW PER FILE MODIFIED, not one row per commit
+2. To count COMMITS: df.drop_duplicates(subset=['commit_sha'])
+3. Use 'name' for contributor names, NOT 'user_login'</code></pre>
+      <p>
+        The schema documentation is essential because the data model has non-obvious semantics. For instance, the commits
+        table contains one row per file modified, not one row per commit. Without explicit guidance, an LLM would likely
+        count rows rather than unique commit SHAs, producing incorrect contributor rankings. By documenting these semantics
+        directly in the prompt, we ensure the generated code handles edge cases correctly.
+      </p>
+      <p>The prompt also includes exact code mappings for common query patterns:</p>
+      <pre><code>"top 5 contributors by commit count":
+result = df.drop_duplicates(subset=['commit_sha'])
+          .groupby('name').size()
+          .sort_values(ascending=False)
+          .head(5)
+          .reset_index(name='commit_count')</code></pre>
+
+      <p>Similarly, for issues queries, the prompt includes the issues data schema:</p>
+      <pre><code>ISSUES DATA SCHEMA - ALL COLUMNS:
+| Column       | Type     | Description                              |
+|--------------|----------|------------------------------------------|
+| type         | string   | 'issue' or 'comment' - FILTER BY THIS    |
+| issue_num    | int      | Issue number (e.g., 123 for #123)        |
+| title        | string   | Issue title (only for type='issue')      |
+| user_login   | string   | GitHub username of reporter              |
+| issue_state  | string   | 'OPEN' or 'CLOSED' (uppercase)           |
+| created_at   | datetime | When issue/comment was created           |
+| updated_at   | datetime | When issue/comment was last updated      |
+| body         | string   | Issue/comment content text               |
+
+CRITICAL RULES FOR ISSUES:
+1. Dataset has BOTH issues AND comments (check 'type' column)
+2. To count ISSUES: df[df['type'] == 'issue']
+3. Use 'user_login' for reporter names, NOT 'name'</code></pre>
+      <p>
+        These mappings function as few-shot examples that demonstrate correct pandas idioms. The LLM can then generalize
+        from these examples to handle variations like &ldquo;top 10 contributors in the past 6 months&rdquo; by combining the
+        ranking pattern with a date filter.
+      </p>
+      <p>
+        The decision to use pandas code generation rather than semantic search for quantitative queries reflects a
+        fundamental insight: <em>aggregation is not retrieval</em>. Computing &ldquo;top N&rdquo; requires processing the
+        entire dataset, not finding the most similar chunks. Numeric operations demand exact values, not semantic
+        approximations. Multi-field filtering (e.g., &ldquo;open issues with more than 10 comments&rdquo;) requires Boolean
+        logic across columns. Chronological sorting is a structured operation, not a semantic one. By matching the retrieval
+        mechanism to the query type, RepoWise ensures that quantitative queries receive computed answers rather than semantic
+        approximations.
+      </p>
+
+      <h3 class="title is-4">Stage 3: Response Generation</h3>
+      <p>
+        The final stage generates a natural language response using task-specific prompt templates. Each template is composed
+        of five modular components: system role, task instructions, anti-hallucination rules, retrieved context, and the user
+        question.
+      </p>
+
+      <h4 class="title is-5">System Role: Establishing Analytical Persona</h4>
+      <p>Every prompt begins with a brief system role that establishes the LLM&rsquo;s persona:</p>
+      <pre><code>You are a precise document analyst for the {project_name} project.</code></pre>
+      <p>
+        This framing is intentionally minimal (approximately 50 tokens) but serves an important function: it primes the model
+        to behave as an analyst extracting information from provided documents rather than a general assistant drawing on
+        training knowledge. The word &ldquo;precise&rdquo; specifically signals that accuracy takes precedence over fluency or
+        completeness.
+      </p>
+
+      <h4 class="title is-5">Task Instructions: Specialization by Query Type</h4>
+      <p>
+        The task instructions vary substantially based on the classified intent. We found that generic instructions produced
+        adequate but not excellent responses; task-specific guidance significantly improved answer quality.
+      </p>
+      <p>For <strong>WHO</strong> queries (entity extraction), the instructions emphasize pattern recognition:</p>
+      <pre><code>TASK: ENTITY EXTRACTION - Extract names, emails, GitHub usernames
+
+1. Search the documents for actual names, email addresses, and
+   GitHub usernames
+2. Look for these patterns:
+   - Email format: "Name &lt;email@domain&gt;"
+   - GitHub format: "@username" (e.g., @fchollet, @MarkDaoust)
+   - CODEOWNERS format: "/path/ @username1 @username2"
+   - Plain names: "Maintained by: John Doe"
+3. ONLY extract names/usernames that actually appear in documents
+4. If NO names found, respond: "No maintainer information found
+   in the available documents"</code></pre>
+      <p>
+        The explicit pattern enumeration prevents the model from hallucinating maintainer identities. By specifying exactly
+        what formats to look for, we constrain the extraction to verifiable entities.
+      </p>
+      <p>For <strong>HOW</strong> queries (process explanation), the instructions emphasize procedural fidelity:</p>
+      <pre><code>TASK: PROCESS EXPLANATION - Explain step-by-step procedures
+
+1. Provide a comprehensive explanation of the process
+2. Break down into clear, numbered steps
+3. Include prerequisites, requirements, or important context
+4. Mention specific tools, commands, or guidelines referenced
+5. Cite which documents contain each piece of information</code></pre>
+      <p>For <strong>COMMITS</strong> queries, the instructions emphasize data-grounded analysis:</p>
+      <pre><code>TASK: ANALYZE COMMIT DATA
+
+1. Answer ONLY using the commit data shown below
+2. DO NOT make up or invent information
+3. Include specific details (commit SHAs, author names, dates)
+4. For "top N" queries: Provide exactly N items in numbered format
+5. If the data doesn't answer the question, say:
+   "The commit data doesn't contain this information"</code></pre>
+      <p>For <strong>ISSUES</strong> queries, the instructions parallel those for commits but emphasize issue-specific details:</p>
+      <pre><code>TASK: ANALYZE ISSUES DATA
+
+1. Answer ONLY using the issues data shown below
+2. DO NOT make up or invent information
+3. Include specific details (issue numbers, titles, users, states)
+4. For statistical questions, include numbers and percentages
+5. For list questions, provide the COMPLETE requested list
+6. If the data doesn't answer the question, say:
+   "The issues data doesn't contain this information"</code></pre>
+
+      <h4 class="title is-5">Anti-Hallucination Rules: The Core of Factual Grounding</h4>
+      <p>
+        The most substantial component of each prompt is the anti-hallucination rules, which consume approximately 3,000
+        tokens. This investment reflects our core design philosophy: <em>it is better to acknowledge missing information
+        than to fabricate plausible-sounding answers</em>.
+      </p>
+      <p>
+        The rules are organized into seven categories, each addressing a specific failure mode we observed during
+        development:
+      </p>
+      <pre><code>RULE 1: INFORMATION SOURCE
+- Your ONLY source is the project documents provided below
+- DO NOT use external knowledge or training data
+- DO NOT make logical inferences beyond what is stated
+
+RULE 2: HANDLING MISSING INFORMATION
+If information is NOT in the documents, respond EXACTLY:
+"The available project documents for {project_name} do not
+contain information about [topic]."
+
+DO NOT:
+- Provide general knowledge answers ("typically", "usually")
+- Make up specific details
+- Give partial answers then admit uncertainty afterward
+
+RULE 3: VERIFICATION PROCESS
+Before stating ANY fact:
+1. Locate the exact text in the documents below
+2. Verify it's explicitly stated, not inferred
+3. Note which document it comes from
+4. Only then include it in your answer</code></pre>
+      <p>
+        Rule 2 is particularly important: it provides an exact template for acknowledging missing information. Without this
+        template, we observed that models would often hedge (&ldquo;This project likely follows standard practices...&rdquo;)
+        rather than clearly stating that the information was unavailable. The explicit template eliminates this ambiguity.
+      </p>
+      <p>
+        Rule 3 introduces a verification protocol that forces the model to trace each claim back to source text. While we
+        cannot verify that the model actually follows this internal process, the instruction appears to reduce unsupported
+        claims in practice.
+      </p>
+
+      <h4 class="title is-5">Retrieved Context: Evidence Base</h4>
+      <p>The retrieved context is formatted to clearly delineate the evidence base:</p>
+      <pre><code>AVAILABLE GOVERNANCE DOCUMENTS FOR {project_name}:
+
+[README] README.md:
+{readme_content}
+
+[CONTRIBUTING] CONTRIBUTING.md:
+{contributing_content}
+
+[GOVERNANCE] GOVERNANCE.md:
+{governance_content}</code></pre>
+      <p>
+        The bracketed document labels serve two purposes: they make citation straightforward (the model can simply reference
+        &ldquo;[CONTRIBUTING]&rdquo;), and they establish clear boundaries between documents. For structured data queries, the
+        context contains the pandas query results formatted as readable tables.
+      </p>
+
+      <h4 class="title is-5">User Question: Generation Cue</h4>
+      <p>The prompt concludes with the user question and a generation cue:</p>
+      <pre><code>USER QUESTION: {query}
+
+Your answer:</code></pre>
+      <p>
+        The phrase &ldquo;Your answer:&rdquo; signals the transition from instruction to generation. This consistent cue
+        ensures predictable generation behavior across all templates.
+      </p>
+
+      <h3 class="title is-4">Special Cases: GENERAL and OUT_OF_SCOPE</h3>
+      <p>
+        Not all queries require repository-specific retrieval. For <code>GENERAL</code> queries (generic programming
+        questions), RepoWise invokes the LLM directly with minimal context:
+      </p>
+      <pre><code>You are a helpful AI assistant. Answer the user's question
+based on your knowledge.
+
+USER QUESTION: {query}</code></pre>
+      <p>
+        This template deliberately omits anti-hallucination rules because the model&rsquo;s training knowledge is the
+        appropriate source for general programming questions.
+      </p>
+      <p>
+        For <code>OUT_OF_SCOPE</code> queries, RepoWise returns a hardcoded response without invoking the LLM at all:
+      </p>
+      <pre><code>"I'm a project governance assistant designed to help you
+understand open-source project documentation, contribution
+guidelines, maintainers, issues, and commit history. Please
+ask me questions about the selected project."</code></pre>
+      <p>
+        This design choice reflects an important principle: when we know the query is out of scope, there is no benefit to
+        generating a response. The hardcoded message is faster, cheaper, and more predictable than LLM generation.
+      </p>
     </div>
   </div>
 </section>
