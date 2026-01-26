@@ -768,20 +768,56 @@
     <h2 class="title is-3 has-text-centered">System Architecture</h2>
 
     <div class="content">
-      <h3 class="title is-4">High-Level Overview</h3>
+      <p>
+        The system architecture of <strong>RepoWise</strong> integrates the aforementioned modules into a cohesive,
+        multi-layered design that connects the user interface, backend services, retrieval engines, storage subsystems,
+        and external APIs. Figure 1 illustrates this architecture and traces the flow of data from user query to final
+        response.
+      </p>
+      <p>
+        At the top of the stack, the <em>Frontend Interface</em> enables query submission and response visualization.
+        The frontend communicates with the backend through asynchronous HTTP requests. The <em>Backend Core</em>,
+        implemented using FastAPI, serves as the central orchestrator that manages intent classification, query routing,
+        retrieval invocation, and prompt assembly. Within the backend, the <em>Intent Classifier</em> applies the
+        classification pipeline described earlier and dispatches the query to the appropriate processing module based on
+        the predicted intent.
+      </p>
+      <p>
+        The <em>Query Processing Layer</em> consists of three components: the <strong>RAG Engine</strong>, the
+        <strong>Structured Analytics Engine</strong>, and a <strong>Static Response Handler</strong>. When the intent is
+        <code>PROJECT_DOC_BASED</code>, the RAG Engine retrieves semantically relevant documentation fragments from
+        ChromaDB. When the intent is <code>COMMITS</code> or <code>ISSUES</code>, the Structured Analytics Engine performs
+        computation over structured repository activity data obtained from the GitHub API. For
+        <code>OUT_OF_SCOPE</code> queries, a fixed response is returned without invoking the LLM. For
+        <code>GENERAL</code> queries, the request is routed directly to the LLM client.
+      </p>
+      <p>
+        Once the prompt is assembled, it is sent to the <em>LLM Client</em>, which interfaces with the local
+        <code>Mistral 7B</code> model hosted by the Ollama server. The model generates an evidence-grounded response,
+        which is streamed back to the backend. The <em>Response Delivery Layer</em> then formats the output, attaches
+        provenance metadata, and returns the response to the frontend.
+      </p>
+      <p>
+        Beneath the query processing layer, the <em>Storage Layer</em> manages persistent data across the ChromaDB vector
+        store, the structured analytics cache, and the raw repository file cache. This layer synchronizes periodically
+        with the GitHub API to ensure data freshness and supports efficient access for repeated queries.
+      </p>
+      <p>
+        Finally, the <em>External Services</em> layer includes the GitHub API, which supplies live repository data, and
+        the Ollama inference server, which hosts the local LLM instance. These services are accessed securely via REST
+        endpoints to minimize latency and preserve privacy during inference.
+      </p>
+      <p>
+        Overall, RepoWise embodies a fully integrated, retrieval-augmented architecture in which classification, data
+        acquisition, and reasoning operate in concert. The system’s modular design enables straightforward extension to
+        new data sources, query types, or analytical capabilities, supporting future research and practical deployment at
+        scale.
+      </p>
       <div class="diagram-container">
-        <a href="./static/diagrams/High_Level.png" target="_blank" title="Click to view full size">
-          <img src="./static/diagrams/High_Level.png" alt="High-Level Architecture" />
+        <a href="./static/diagrams/ArchitectureDiagram.png" target="_blank" title="Click to view full size">
+          <img src="./static/diagrams/ArchitectureDiagram.png" alt="RepoWise system architecture diagram" />
         </a>
-        <p class="has-text-centered"><em>Figure 1: High-level system architecture showing major components (click to enlarge)</em></p>
-      </div>
-
-      <h3 class="title is-4">Detailed Architecture</h3>
-      <div class="diagram-container">
-        <a href="./static/diagrams/ColorfulArchitecture.png" target="_blank" title="Click to view full size">
-          <img src="./static/diagrams/ColorfulArchitecture.png" alt="Detailed Architecture" />
-        </a>
-        <p class="has-text-centered"><em>Figure 2: Detailed architecture with RAG pipeline and data flow (click to enlarge)</em></p>
+        <p class="has-text-centered"><em>Figure 1: RepoWise system architecture (click to enlarge)</em></p>
       </div>
 
       <div class="feature-box">
