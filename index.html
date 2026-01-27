@@ -901,8 +901,9 @@
 
     <div class="content">
       <p>
-        Each query is transformed into a task-specific prompt composed of five modular components. RepoWise currently
-        defines six intent-driven templates that balance factual grounding, task specialization, and evidence transparency.
+        For repository-specific intents (<code>PROJECT_DOC_BASED</code>, <code>COMMITS</code>, <code>ISSUES</code>), each query
+        is transformed into a task-specific prompt composed of five modular components. <code>GENERAL</code> and
+        <code>OUT_OF_SCOPE</code> intents use simplified handling as described below.
       </p>
 
       <h3 class="title is-4">Component Structure</h3>
@@ -1157,7 +1158,7 @@ Use 'user_login' for reporter names, NOT 'name'</code></pre>
 8. Acknowledge when multiple valid approaches exist.</code></pre>
       <p><strong>Principle:</strong> Generic guidance without project assumptions acknowledges technical diversity and avoids false specificity.</p>
 
-      <h4 class="title is-5">Component 3: Anti-Hallucination Rules (Universal, &sim;3000 tokens)</h4>
+      <h4 class="title is-5">Component 3: Anti-Hallucination Rules</h4>
       <pre><code>CRITICAL INSTRUCTIONS - FOLLOW EXACTLY:
 
 1. INFORMATION SOURCE
@@ -1313,9 +1314,9 @@ Your answer:</code></pre>
       <p>
         Rather than relying on simple keyword matching or a fine-tuned classifier, RepoWise employs a Few-Shot
         Chain-of-Thought (CoT) prompting strategy. We chose this approach because repository queries often contain semantically
-        ambiguous phrases that require reasoning to disambiguate. For example, &ldquo;Who are the core developers?&rdquo; and
-        &ldquo;Who maintains this project?&rdquo; appear similar but require different data sources: the former implies ranking
-        by commit activity (structured data), while the latter asks about documented governance roles (documentation).
+        ambiguous phrases that require reasoning to disambiguate. For example, &ldquo;Who are the core developers?&rdquo;
+        requires aggregation over commit history to rank contributors by activity, while &ldquo;How can I start contributing?&rdquo;
+        requires semantic search over documentation to retrieve contribution guidelines and onboarding procedures.
       </p>
       <p>The classification prompt begins by establishing the task and defining each category with precise boundaries:</p>
       <pre><code>You are an intent classifier for a GitHub repository Q&amp;A system.
@@ -1340,7 +1341,7 @@ CATEGORIES:
       <p>
         The prompt includes 24 carefully selected exemplars that demonstrate the reasoning process. Each exemplar shows not
         just the classification but <em>why</em> that classification is correct. We specifically chose exemplars that address
-        common sources of confusion:
+        common sources of confusion like below:
       </p>
       <pre><code>Query: "Who are the top 5 contributors?"
 Reasoning: "Top contributors" implies ranking by measurable
@@ -1387,9 +1388,8 @@ Intent: PROJECT_DOC_BASED</code></pre>
       <p>
         When a query arrives, it is embedded in the same vector space, and the system retrieves the top-5 most similar
         chunks. These chunks are then re-ranked using a hybrid scoring function that combines semantic similarity with two
-        additional factors: (1) document type prioritization, which boosts governance-related documents
-        (<code>GOVERNANCE</code>, <code>MAINTAINERS</code>, <code>CODEOWNERS</code>) for queries about project roles, and
-        (2) content keyword matching, which boosts results containing query keywords. For &ldquo;who&rdquo; queries
+        additional factors: (1) document type prioritization (<code>GOVERNANCE</code>, <code>MAINTAINERS</code>, <code>CODEOWNERS</code>) for queries about project roles, and
+        (2) content keyword matching. For &ldquo;who&rdquo; queries
         specifically, the re-ranker also counts GitHub username patterns (@ symbols) to prioritize documents containing
         contributor identities. We found that pure semantic similarity occasionally retrieved topically related but
         factually irrelevant passages; the hybrid approach mitigates this by ensuring governance documents rank higher for
@@ -1469,22 +1469,22 @@ CRITICAL RULES FOR ISSUES:
 
       <h3 class="title is-4">Stage 3: Response Generation</h3>
       <p>
-        The final stage generates a natural language response using task-specific prompt templates. Each template is composed
-        of five modular components: system role, task instructions, anti-hallucination rules, retrieved context, and the user
-        question.
+        The final stage generates a natural language response using task-specific prompts. For repository-specific intents
+        (<code>PROJECT_DOC_BASED</code>, <code>COMMITS</code>, and <code>ISSUES</code>), each prompt is composed of five
+        modular components: system role, task instructions, anti-hallucination rules, retrieved context, and the user question.
       </p>
 
-      <h4 class="title is-5">System Role: Establishing Analytical Persona</h4>
+      <h4 class="title is-5">Component 1: System Role</h4>
       <p>Every prompt begins with a brief system role that establishes the LLM&rsquo;s persona:</p>
       <pre><code>You are a precise document analyst for the {project_name} project.</code></pre>
       <p>
-        This framing is intentionally minimal (approximately 50 tokens) but serves an important function: it primes the model
+        This framing is intentionally minimal but serves an important function: it primes the model
         to behave as an analyst extracting information from provided documents rather than a general assistant drawing on
         training knowledge. The word &ldquo;precise&rdquo; specifically signals that accuracy takes precedence over fluency or
         completeness.
       </p>
 
-      <h4 class="title is-5">Task Instructions: Specialization by Query Type</h4>
+      <h4 class="title is-5">Component 2: Task Instructions</h4>
       <p>
         The task instructions vary substantially based on the classified intent. We found that generic instructions produced
         adequate but not excellent responses; task-specific guidance significantly improved answer quality.
@@ -1509,19 +1509,19 @@ CRITICAL RULES FOR ISSUES:
       <p>For <strong>HOW</strong> queries (process explanation), the instructions emphasize procedural fidelity:</p>
       <pre><code>TASK: PROCESS EXPLANATION - Explain step-by-step procedures
 
-1. Provide a comprehensive explanation of the process
-2. Break down into clear, numbered steps
-3. Include prerequisites, requirements, or important context
-4. Mention specific tools, commands, or guidelines referenced
-5. Cite which documents contain each piece of information</code></pre>
+      1. Provide a comprehensive explanation of the process
+      2. Break down into clear, numbered steps
+      3. Include prerequisites, requirements, or important context
+      4. Mention specific tools, commands, or guidelines referenced
+      5. Cite which documents contain each piece of information</code></pre>
       <p>For <strong>COMMITS</strong> queries, the instructions emphasize data-grounded analysis:</p>
       <pre><code>TASK: ANALYZE COMMIT DATA
 
-1. Answer ONLY using the commit data shown below
-2. DO NOT make up or invent information
-3. Include specific details (commit SHAs, author names, dates)
-4. For "top N" queries: Provide exactly N items in numbered format
-5. If the data doesn't answer the question, say:
+    1. Answer ONLY using the commit data shown below
+    2. DO NOT make up or invent information
+    3. Include specific details (commit SHAs, author names, dates)
+    4. For "top N" queries: Provide exactly N items in numbered format
+    5. If the data doesn't answer the question, say:
    "The commit data doesn't contain this information"</code></pre>
       <p>For <strong>ISSUES</strong> queries, the instructions parallel those for commits but emphasize issue-specific details:</p>
       <pre><code>TASK: ANALYZE ISSUES DATA
@@ -1534,11 +1534,9 @@ CRITICAL RULES FOR ISSUES:
 6. If the data doesn't answer the question, say:
    "The issues data doesn't contain this information"</code></pre>
 
-      <h4 class="title is-5">Anti-Hallucination Rules: The Core of Factual Grounding</h4>
+      <h4 class="title is-5">Component 3: Anti-Hallucination Rules</h4>
       <p>
-        The most substantial component of each prompt is the anti-hallucination rules, which consume approximately 3,000
-        tokens. This investment reflects our core design philosophy: <em>it is better to acknowledge missing information
-        than to fabricate plausible-sounding answers</em>.
+        This component enables RepoWise <em>acknowledging that missing information is preferable to fabricating plausible-sounding answers</em>.
       </p>
       <p>
         The rules are organized into seven categories, each addressing a specific failure mode we observed during
@@ -1564,19 +1562,37 @@ Before stating ANY fact:
 1. Locate the exact text in the documents below
 2. Verify it's explicitly stated, not inferred
 3. Note which document it comes from
-4. Only then include it in your answer</code></pre>
+4. Only then include it in your answer
+
+RULE 4: ANSWER FORMAT
+GOOD: "According to GOVERNANCE.md, maintainers are elected
+      by consensus vote."
+BAD:  "Maintainers are typically elected by a majority vote,
+      though this isn't explicitly stated."
+
+RULE 5: NAMES, NUMBERS, AND SPECIFICS
+- Only mention names, emails, numbers, or percentages that
+  appear verbatim in the documents
+- If you cannot find a specific piece of information, say so
+- Never invent examples or provide "typical" values
+
+RULE 6: OUTPUT FORMAT
+- DO NOT expose your reasoning process to the user
+- DO NOT write: "Let me verify...", "Based on my analysis..."
+- DO NOT mention: "ANTI-HALLUCINATION", "rules", or
+  "guidelines I'm following"
+
+RULE 7: RESPONSE COMPLETENESS
+- Provide COMPLETE answers with all relevant details
+- Include supporting information when available
+- Balance brevity with informativeness</code></pre>
       <p>
         Rule 2 is particularly important: it provides an exact template for acknowledging missing information. Without this
         template, we observed that models would often hedge (&ldquo;This project likely follows standard practices...&rdquo;)
-        rather than clearly stating that the information was unavailable. The explicit template eliminates this ambiguity.
-      </p>
-      <p>
-        Rule 3 introduces a verification protocol that forces the model to trace each claim back to source text. While we
-        cannot verify that the model actually follows this internal process, the instruction appears to reduce unsupported
-        claims in practice.
+        rather than clearly stating that the information was unavailable.
       </p>
 
-      <h4 class="title is-5">Retrieved Context: Evidence Base</h4>
+      <h4 class="title is-5">Component 4: Retrieved Context</h4>
       <p>The retrieved context is formatted to clearly delineate the evidence base:</p>
       <pre><code>AVAILABLE GOVERNANCE DOCUMENTS FOR {project_name}:
 
@@ -1594,7 +1610,7 @@ Before stating ANY fact:
         context contains the pandas query results formatted as readable tables.
       </p>
 
-      <h4 class="title is-5">User Question: Generation Cue</h4>
+      <h4 class="title is-5">Component 5: User Question</h4>
       <p>The prompt concludes with the user question and a generation cue:</p>
       <pre><code>USER QUESTION: {query}
 
@@ -1606,22 +1622,20 @@ Your answer:</code></pre>
 
       <h3 class="title is-4">Special Cases: GENERAL and OUT_OF_SCOPE</h3>
       <p>
-        Not all queries require repository-specific retrieval. For <code>GENERAL</code> queries (generic programming
-        questions), RepoWise invokes the LLM directly with minimal context:
+        Not all queries require repository-specific retrieval. For <code>GENERAL</code> queries (generic programming questions),
+        RepoWise invokes the LLM directly without repository context:
       </p>
-      <pre><code>You are a helpful AI assistant. Answer the user's question
-based on your knowledge.
+      <pre><code>You are a helpful AI assistant. Answer the user's question based on your knowledge.
 
 USER QUESTION: {query}</code></pre>
-      <p>
-        This template deliberately omits anti-hallucination rules because the model&rsquo;s training knowledge is the
+      <!-- <p>
+        This prompt deliberately omits anti-hallucination rules because the model&rsquo;s training knowledge is the
         appropriate source for general programming questions.
-      </p>
+      </p> -->
       <p>
-        For <code>OUT_OF_SCOPE</code> queries, RepoWise returns a hardcoded response without invoking the LLM at all:
+        For <code>OUT_OF_SCOPE</code> queries (greetings, off-topic requests), RepoWise returns a hardcoded response without invoking the LLM at all:
       </p>
-      <pre><code>"I'm a project governance assistant designed to help you
-understand open-source project documentation, contribution
+      <pre><code>"I'm a project governance assistant designed to help you open-source project documentation, contribution
 guidelines, maintainers, issues, and commit history. Please
 ask me questions about the selected project."</code></pre>
       <p>
